@@ -1,0 +1,13 @@
+/config.h
+/config.log
+/config.status
+/autom4te.cache
+Makefile
+/libtool
+/stamp-*
+/libusb_vhci-*.*
+/src/.deps
+/src/.libs
+*.la
+*.lo
+*.o
