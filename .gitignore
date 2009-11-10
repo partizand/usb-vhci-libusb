@@ -13,3 +13,4 @@ Makefile
 *.o
 *.kdevelop.pcs
 *.kdevses
+/Doxyfile
