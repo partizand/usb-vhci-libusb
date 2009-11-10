@@ -11,3 +11,5 @@ Makefile
 *.la
 *.lo
 *.o
+*.kdevelop.pcs
+*.kdevses
