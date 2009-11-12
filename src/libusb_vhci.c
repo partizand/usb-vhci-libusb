@@ -22,10 +22,42 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-int main(int argc, char *argv[])
+#include "vhci-hcd.h"
+#include "libusb_vhci.h"
+
+int usb_vhci_open(uint8_t port_count, int32_t *id, int32_t *usb_busnum, char *bus_id)
 {
-  printf("Hello, world!\n");
+	int fd, res, err;
+	struct vhci_ioc_register r;
 
-  return EXIT_SUCCESS;
+	fd = open("/dev/vhci-ctrl", O_RDWR);
+	if(fd == -1) return -1;
+
+	memset(&r, 0, sizeof r);
+	r.port_count = port_count;
+	res = ioctl(fd, VHCI_HCD_IOCREGISTER, &r);
+	if(res == -1)
+	{
+		err = errno;
+		TEMP_FAILURE_RETRY(close(fd));
+		errno = err;
+		return -2;
+	}
+
+	if(id) *id = r.id;
+	if(usb_busnum) *usb_busnum = r.usb_busnum;
+	if(bus_id)
+	{
+		size_t s = sizeof r.bus_id - sizeof *r.bus_id;
+		memcpy(bus_id, r.bus_id, s);
+		bus_id[s] = 0;
+	}
+
+	return fd;
 }
+

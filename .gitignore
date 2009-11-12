@@ -14,3 +14,5 @@ Makefile
 *.kdevelop.pcs
 *.kdevses
 /Doxyfile
+*~
+*.swp
