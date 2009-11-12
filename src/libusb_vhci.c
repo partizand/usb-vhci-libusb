@@ -38,14 +38,13 @@ int usb_vhci_open(uint8_t port_count, int32_t *id, int32_t *usb_busnum, char *bu
 	fd = open("/dev/vhci-ctrl", O_RDWR);
 	if(fd == -1) return -1;
 
-	memset(&r, 0, sizeof r);
 	r.port_count = port_count;
 	if(ioctl(fd, VHCI_HCD_IOCREGISTER, &r) == -1)
 	{
 		err = errno;
 		usb_vhci_close(fd);
 		errno = err;
-		return -2;
+		return -1;
 	}
 
 	if(id) *id = r.id;
@@ -63,4 +62,28 @@ int usb_vhci_open(uint8_t port_count, int32_t *id, int32_t *usb_busnum, char *bu
 int usb_vhci_close(int fd)
 {
 	return TEMP_FAILURE_RETRY(close(fd));
+}
+
+int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work)
+{
+	struct vhci_ioc_work w;
+
+	if(ioctl(fd, VHCI_HCD_IOCFETCHWORK, &w) == -1)
+		return -1;
+
+	switch(w.type)
+	{
+	case VHCI_IOC_WORK_TYPE_PORT_STAT:
+		work->type = USB_VHCI_WORK_TYPE_PORT_STAT;
+		work->work.portstat.status = w.work.port.status;
+		work->work.portstat.change = w.work.port.change;
+		work->work.portstat.index = w.work.port.index;
+		work->work.portstat.flags = w.work.port.flags;
+		return 0;
+	case VHCI_IOC_WORK_TYPE_PROCESS_URB:
+	case VHCI_IOC_WORK_TYPE_CANCEL_URB:
+	default:
+		errno = EIO;
+		return -1;
+	}
 }

@@ -34,7 +34,8 @@ struct usb_vhci_urb
 
 struct usb_vhci_portstat
 {
-	uint16_t status, change, flags;
+	uint16_t status, change;
+	uint8_t index, flags;
 };
 
 struct usb_vhci_work
