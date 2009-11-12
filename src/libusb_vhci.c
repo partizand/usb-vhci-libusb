@@ -32,7 +32,7 @@
 
 int usb_vhci_open(uint8_t port_count, int32_t *id, int32_t *usb_busnum, char *bus_id)
 {
-	int fd, res, err;
+	int fd, err;
 	struct vhci_ioc_register r;
 
 	fd = open("/dev/vhci-ctrl", O_RDWR);
@@ -40,8 +40,7 @@ int usb_vhci_open(uint8_t port_count, int32_t *id, int32_t *usb_busnum, char *bu
 
 	memset(&r, 0, sizeof r);
 	r.port_count = port_count;
-	res = ioctl(fd, VHCI_HCD_IOCREGISTER, &r);
-	if(res == -1)
+	if(ioctl(fd, VHCI_HCD_IOCREGISTER, &r) == -1)
 	{
 		err = errno;
 		usb_vhci_close(fd);
