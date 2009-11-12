@@ -44,7 +44,7 @@ int usb_vhci_open(uint8_t port_count, int32_t *id, int32_t *usb_busnum, char *bu
 	if(res == -1)
 	{
 		err = errno;
-		TEMP_FAILURE_RETRY(close(fd));
+		usb_vhci_close(fd);
 		errno = err;
 		return -2;
 	}
@@ -61,3 +61,7 @@ int usb_vhci_open(uint8_t port_count, int32_t *id, int32_t *usb_busnum, char *bu
 	return fd;
 }
 
+int usb_vhci_close(int fd)
+{
+	return TEMP_FAILURE_RETRY(close(fd));
+}
