@@ -115,7 +115,7 @@ int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work)
 			break;
 		default:
 			errno = EBADMSG;
-			return -1;
+			return -1;<<
 		}
 		work->type = USB_VHCI_WORK_TYPE_PROCESS_URB;
 		work->work.urb.status        = -EINPROGRESS;
@@ -137,8 +137,19 @@ int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work)
 		errno = EBADMSG;
 		return -1;
 	}
+}
 
-	int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb)
-	{
-	}
+int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb)
+{
+	struct vhci_ioc_urb_data u;
+	u.handle        = urb->handle;
+	u.buffer_length = urb->buffer_length;
+	u.packet_count  = urb->packet_count;
+	u.buffer        = urb->buffer;
+	u.iso_packets   = urb->iso_packets;
+
+	if(ioctl(fd, VHCI_HCD_IOCFETCHDATA, &u) == -1)
+		return -1;
+
+	return 0;
 }
