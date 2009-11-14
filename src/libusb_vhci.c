@@ -79,10 +79,10 @@ int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work)
 	{
 	case VHCI_IOC_WORK_TYPE_PORT_STAT:
 		work->type = USB_VHCI_WORK_TYPE_PORT_STAT;
-		work->work.portstat.status = w.work.port.status;
-		work->work.portstat.change = w.work.port.change;
-		work->work.portstat.index  = w.work.port.index;
-		work->work.portstat.flags  = w.work.port.flags;
+		work->work.port_stat.status = w.work.port.status;
+		work->work.port_stat.change = w.work.port.change;
+		work->work.port_stat.index  = w.work.port.index;
+		work->work.port_stat.flags  = w.work.port.flags;
 		return 0;
 
 	case VHCI_IOC_WORK_TYPE_PROCESS_URB:
@@ -115,7 +115,7 @@ int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work)
 			break;
 		default:
 			errno = EBADMSG;
-			return -1;<<
+			return -1;
 		}
 		work->type = USB_VHCI_WORK_TYPE_PROCESS_URB;
 		work->work.urb.status        = -EINPROGRESS;
@@ -151,5 +151,41 @@ int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb)
 	if(ioctl(fd, VHCI_HCD_IOCFETCHDATA, &u) == -1)
 		return -1;
 
+	return 0;
+}
+
+int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
+{
+	struct vhci_ioc_giveback gb;
+	gb.handle = urb->handle;
+	gb.status = urb->status;
+	gb.buffer_actual = urb->buffer_actual;
+	gb.buffer = NULL;
+	gb.iso_packets = NULL;
+	gb.packet_count = 0;
+	gb.error_count = 0;
+
+	if(usb_vhci_is_in(urb->epadr) && gb.buffer_actual > 0)
+		gb.buffer = urb->buffer;
+	if(usb_vhci_is_iso(urb->type))
+	{
+		const int pc = urb->packet_count;
+		gb.iso_packets = malloc(sizeof(struct vhci_ioc_iso_packet_giveback) * pc);
+		gb.packet_count = pc;
+		gb.error_count = urb->error_count;
+		for(int i = 0; i < pc; i++)
+		{
+			gb.iso_packets[i].status = urb->iso_packets[i].status;
+			gb.iso_packets[i].packet_actual = (uint32_t)urb->iso_packets[i].packet_actual;
+		}
+	}
+
+	int ret = ioctl(fd, VHCI_HCD_IOCGIVEBACK, &gb);
+
+	if(gb.iso_packets)
+		free(gb.iso_packets);
+	if(ret == -1)
+		return (errno == ECANCELED) ? 0 : -1;
+	errno = 0;
 	return 0;
 }

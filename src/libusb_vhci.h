@@ -30,7 +30,7 @@ extern "C" {
 struct usb_vhci_iso_packet
 {
 	uint32_t offset;
-	uint32_t packet_length, packet_actual;
+	int32_t packet_length, packet_actual;
 	int32_t status;
 };
 
@@ -56,7 +56,7 @@ struct usb_vhci_urb
 #define USB_VHCI_URB_TYPE_BULK    3
 };
 
-struct usb_vhci_portstat
+struct usb_vhci_port_stat
 {
 	uint16_t status, change;
 	uint8_t index, flags;
@@ -68,7 +68,7 @@ struct usb_vhci_work
 	{
 		uint64_t handle;
 		struct usb_vhci_urb urb;
-		struct usb_vhci_portstat portstat;
+		struct usb_vhci_port_stat port_stat;
 	} work;
 
 	int type;
@@ -84,6 +84,8 @@ int usb_vhci_open(uint8_t port_count,
 int usb_vhci_close(int fd);
 int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work);
 int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb);
+int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb);
+int usb_vhci_update_port_stat(int fd, const struct usb_vhci_port_stat stat);
 
 #ifdef __cplusplus
 } // extern "C"
