@@ -111,5 +111,36 @@ int usb_vhci_update_port_stat(int fd, struct usb_vhci_port_stat stat);
 #define usb_vhci_is_control(type) ((type) == USB_VHCI_URB_TYPE_CONTROL)
 #define usb_vhci_is_bulk(type)    ((type) == USB_VHCI_URB_TYPE_BULK)
 
+#ifdef __cplusplus
+namespace usb
+{
+	namespace vhci
+	{
+		enum urb_type
+		{
+			isochronous = USB_VHCI_URB_TYPE_ISO,
+			interrupt   = USB_VHCI_URB_TYPE_INT,
+			control     = USB_VHCI_URB_TYPE_CONTROL,
+			bulk        = USB_VHCI_URB_TYPE_BULK
+		};
+
+		class urb : protected usb_vhci_urb
+		{
+		private:
+			urb() { }
+			urb(const urb& urb) { }
+
+		public:
+			urb(urb_type type)
+			{
+				this->type = type;
+			}
+
+			urb_type getType() { return static_cast<urb_type>(type); }
+		};
+	}
+}
+#endif // __cplusplus
+
 #endif // __LIBUSB_VHCI_H__
 
