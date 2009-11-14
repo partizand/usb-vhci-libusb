@@ -59,6 +59,19 @@ struct usb_vhci_urb
 struct usb_vhci_port_stat
 {
 	uint16_t status, change;
+#define USB_VHCI_PORT_STAT_CONNECTION    0x0001
+#define USB_VHCI_PORT_STAT_ENABLE        0x0002
+#define USB_VHCI_PORT_STAT_SUSPEND       0x0004
+#define USB_VHCI_PORT_STAT_OVERCURRENT   0x0008
+#define USB_VHCI_PORT_STAT_RESET         0x0010
+#define USB_VHCI_PORT_STAT_POWER         0x0100
+#define USB_VHCI_PORT_STAT_LOW_SPEED     0x0200
+#define USB_VHCI_PORT_STAT_HIGH_SPEED    0x0400
+#define USB_VHCI_PORT_STAT_C_CONNECTION  0x0001
+#define USB_VHCI_PORT_STAT_C_ENABLE      0x0002
+#define USB_VHCI_PORT_STAT_C_SUSPEND     0x0004
+#define USB_VHCI_PORT_STAT_C_OVERCURRENT 0x0008
+#define USB_VHCI_PORT_STAT_C_RESET       0x0010
 	uint8_t index, flags;
 };
 
@@ -85,7 +98,7 @@ int usb_vhci_close(int fd);
 int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work);
 int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb);
 int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb);
-int usb_vhci_update_port_stat(int fd, const struct usb_vhci_port_stat stat);
+int usb_vhci_update_port_stat(int fd, struct usb_vhci_port_stat stat);
 
 #ifdef __cplusplus
 } // extern "C"

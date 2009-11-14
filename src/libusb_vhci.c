@@ -204,3 +204,15 @@ int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
 	errno = 0;
 	return 0;
 }
+
+int usb_vhci_update_port_stat(int fd, struct usb_vhci_port_stat stat)
+{
+	struct vhci_ioc_port_stat ps;
+	ps.status = stat.status;
+	ps.change = stat.change;
+	ps.index  = stat.index;
+	ps.flags  = stat.flags;
+	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+		return -1;
+	return 0;
+}

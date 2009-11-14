@@ -197,6 +197,7 @@ INCLUDES = $(all_includes)
 # the library search path.
 libusb_vhci_la_LDFLAGS = $(all_libraries)
 include_HEADERS = libusb_vhci.h
+AM_CFLAGS = -std=c99 -Wall
 all: all-am
 
 .SUFFIXES:
