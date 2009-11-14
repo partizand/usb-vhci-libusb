@@ -9,4 +9,4 @@ libusb_vhci_la_LDFLAGS = $(all_libraries)
 
 include_HEADERS = libusb_vhci.h
 
-AM_CFLAGS = -std=c99 -wall
+AM_CFLAGS = -std=c99 -Wall

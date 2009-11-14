@@ -144,14 +144,29 @@ int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb)
 	struct vhci_ioc_urb_data u;
 	u.handle        = urb->handle;
 	u.buffer_length = urb->buffer_length;
-	u.packet_count  = urb->packet_count;
+	const int pc    = urb->packet_count;
+	u.packet_count  = pc;
 	u.buffer        = urb->buffer;
-	u.iso_packets   = urb->iso_packets;
+	u.iso_packets   = NULL;
+	if(pc > 0)
+		u.iso_packets = malloc(sizeof *u.iso_packets * pc);
 
-	if(ioctl(fd, VHCI_HCD_IOCFETCHDATA, &u) == -1)
-		return -1;
+	int ret = ioctl(fd, VHCI_HCD_IOCFETCHDATA, &u);
+	if(ret == -1)
+		goto err;
+	ret = 0;
+	for(int i = 0; i < pc; i++)
+	{
+		urb->iso_packets[i].offset = u.iso_packets[i].offset;
+		urb->iso_packets[i].packet_length = (int32_t)u.iso_packets[i].packet_length;
+		urb->iso_packets[i].packet_actual = 0;
+		urb->iso_packets[i].status = -EINPROGRESS;
+	}
 
-	return 0;
+err:
+	if(u.iso_packets)
+		free(u.iso_packets);
+	return ret;
 }
 
 int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
@@ -170,7 +185,7 @@ int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
 	if(usb_vhci_is_iso(urb->type))
 	{
 		const int pc = urb->packet_count;
-		gb.iso_packets = malloc(sizeof(struct vhci_ioc_iso_packet_giveback) * pc);
+		gb.iso_packets = malloc(sizeof *gb.iso_packets * pc);
 		gb.packet_count = pc;
 		gb.error_count = urb->error_count;
 		for(int i = 0; i < pc; i++)
