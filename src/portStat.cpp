@@ -24,7 +24,10 @@
 
 namespace usb
 {
-	urb::~urb() throw()
+	namespace vhci
 	{
+		portStat::~portStat() throw()
+		{
+		}
 	}
 }

@@ -53,7 +53,8 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libusb_vhci_la_LIBADD =
-am_libusb_vhci_la_OBJECTS = libusb_vhci.lo urb.lo
+am_libusb_vhci_la_OBJECTS = libusb_vhci.lo urb.lo portStat.lo work.lo \
+	hcd.lo local_hcd.lo
 libusb_vhci_la_OBJECTS = $(am_libusb_vhci_la_OBJECTS)
 libusb_vhci_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
@@ -206,7 +207,11 @@ lib_LTLIBRARIES = libusb_vhci.la
 libusb_vhci_la_SOURCES = \
 libusb_vhci.c \
 vhci-hcd.h \
-urb.cpp
+urb.cpp \
+portStat.cpp \
+work.cpp \
+hcd.cpp \
+local_hcd.cpp
 
 
 # set the include path found by configure
@@ -216,7 +221,7 @@ INCLUDES = $(all_includes)
 libusb_vhci_la_LDFLAGS = $(all_libraries)
 include_HEADERS = libusb_vhci.h
 AM_CFLAGS = -std=c99 -Wall
-AM_CXXFLAGS = -Wall
+AM_CXXFLAGS = -fno-enforce-eh-specs -Wall -Weffc++ -Wold-style-cast -Woverloaded-virtual -Wsign-promo -Wstrict-null-sentinel
 all: all-am
 
 .SUFFIXES:
@@ -286,8 +291,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hcd.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/local_hcd.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/portStat.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/urb.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/work.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

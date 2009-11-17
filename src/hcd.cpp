@@ -24,7 +24,15 @@
 
 namespace usb
 {
-	urb::~urb() throw()
+	namespace vhci
 	{
+		hcd::hcd(uint8_t ports) throw(std::invalid_argument) : port_count(ports)
+		{
+			if(ports == 0) throw std::invalid_argument("ports");
+		}
+
+		hcd::~hcd() throw()
+		{
+		}
 	}
 }

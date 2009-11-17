@@ -24,7 +24,10 @@
 
 namespace usb
 {
-	urb::~urb() throw()
+	namespace vhci
 	{
+		local_hcd::local_hcd(uint8_t ports) throw(std::invalid_argument) : hcd(ports)
+		{
+		}
 	}
 }

@@ -21,6 +21,13 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+#include <errno.h>
+#include <string>
+#include <exception>
+#include <stdexcept>
+#endif
+
 #define USB_VHCI_DEVICE_FILE "/dev/vhci-ctrl"
 
 #ifdef __cplusplus
@@ -73,6 +80,7 @@ struct usb_vhci_port_stat
 #define USB_VHCI_PORT_STAT_C_OVERCURRENT 0x0008
 #define USB_VHCI_PORT_STAT_C_RESET       0x0010
 	uint8_t index, flags;
+#define USB_VHCI_PORT_STAT_FLAG_RESUMING 0x01
 };
 
 struct usb_vhci_work
@@ -114,29 +122,208 @@ int usb_vhci_update_port_stat(int fd, struct usb_vhci_port_stat stat);
 #ifdef __cplusplus
 namespace usb
 {
+	enum urbType
+	{
+		utIsochronous = USB_VHCI_URB_TYPE_ISO,
+		utInterrupt   = USB_VHCI_URB_TYPE_INT,
+		utControl     = USB_VHCI_URB_TYPE_CONTROL,
+		utBulk        = USB_VHCI_URB_TYPE_BULK
+	};
+
+	class urb
+	{
+	private:
+		usb_vhci_urb _urb;
+
+		urb() throw();
+		urb(const urb&) throw();
+		urb& operator=(const urb&) throw();
+
+	public:
+		virtual ~urb() throw();
+
+		const usb_vhci_urb* getInternal() const throw() { return &_urb; }
+		uint64_t getHandle() const throw() { return _urb.handle; }
+		uint8_t* getBuffer() const throw() { return _urb.buffer; }
+		uint32_t getIsoPacketOffset(int32_t index) const throw() { return _urb.iso_packets[index].offset; }
+		int32_t getIsoPacketLength(int32_t index) const throw() { return _urb.iso_packets[index].packet_length; }
+		int32_t getIsoPacketActual(int32_t index) const throw() { return _urb.iso_packets[index].packet_actual; }
+		int32_t getIsoPacketStatus(int32_t index) const throw() { return _urb.iso_packets[index].status; }
+		uint8_t* getIsoPacketBuffer(int32_t index) const throw() { return _urb.buffer + _urb.iso_packets[index].offset; }
+		int32_t getBufferLength() const throw() { return _urb.buffer_length; }
+		int32_t getBufferActual() const throw() { return _urb.buffer_actual; }
+		int32_t getIsoPacketCount() const throw() { return _urb.packet_count; }
+		int32_t getIsoErrorCount() const throw() { return _urb.error_count; }
+		int32_t getStatus() const throw() { return _urb.status; }
+		int32_t getInterval() const throw() { return _urb.interval; }
+		uint16_t getFlags() const throw() { return _urb.flags; }
+		uint16_t getWValue() const throw() { return _urb.wValue; }
+		uint16_t getWIndex() const throw() { return _urb.wIndex; }
+		uint16_t getWLength() const throw() { return _urb.wLength; }
+		uint8_t getBmRequestType() const throw() { return _urb.bmRequestType; }
+		uint8_t getBRequest() const throw() { return _urb.bRequest; }
+		uint8_t getDeviceAddress() const throw() { return _urb.devadr; }
+		uint8_t getEndpointAddress() const throw() { return _urb.epadr; }
+		urbType getType() const throw() { return static_cast<urbType>(_urb.type); }
+		bool isIn() const throw() { return _urb.epadr & 0x80; }
+		bool isOut() const throw() { return !isIn(); }
+		void setStatus(int32_t value) throw() { _urb.status = value; }
+		void ack() throw() { setStatus(0); }
+		void stall() throw() { setStatus(-EPIPE); }
+		void setBufferActual(int32_t value) throw() { _urb.buffer_actual = value; }
+		bool isShortNotOk() const throw() { return _urb.flags & USB_VHCI_URB_FLAGS_SHORT_NOT_OK; }
+		bool isZeroPacket() const throw() { return _urb.flags & USB_VHCI_URB_FLAGS_ZERO_PACKET; }
+	};
+
 	namespace vhci
 	{
-		enum urb_type
-		{
-			isochronous = USB_VHCI_URB_TYPE_ISO,
-			interrupt   = USB_VHCI_URB_TYPE_INT,
-			control     = USB_VHCI_URB_TYPE_CONTROL,
-			bulk        = USB_VHCI_URB_TYPE_BULK
-		};
-
-		class urb : protected usb_vhci_urb
+		class portStat
 		{
 		private:
-			urb() { }
-			urb(const urb& urb) { }
+			uint16_t status;
+			uint16_t change;
+			uint8_t flags;
 
 		public:
-			urb(urb_type type)
-			{
-				this->type = type;
-			}
+			portStat() throw() : status(0), change(0), flags(0) { }
+			portStat(uint16_t status, uint16_t change, uint8_t flags) throw()
+				: status(status), change(change), flags(flags) { };
+			virtual ~portStat() throw();
+			uint16_t getStatus() const throw() { return status; }
+			uint16_t getChange() const throw() { return change; }
+			uint8_t getFlags()   const throw() { return flags; }
+			void setStatus(uint16_t value) throw() { status = value; }
+			void setChange(uint16_t value) throw() { change = value; }
+			void setFlags(uint8_t value)   throw() { flags = value; }
+			bool getResuming() const throw() { return flags & USB_VHCI_PORT_STAT_FLAG_RESUMING; }
+			void setResuming(bool value) throw()
+			{ flags = (flags & ~USB_VHCI_PORT_STAT_FLAG_RESUMING) | (value ? USB_VHCI_PORT_STAT_FLAG_RESUMING : 0); }
+			bool getConnection()  const throw() { return status & USB_VHCI_PORT_STAT_CONNECTION; }
+			bool getEnable()      const throw() { return status & USB_VHCI_PORT_STAT_ENABLE; }
+			bool getSuspend()     const throw() { return status & USB_VHCI_PORT_STAT_SUSPEND; }
+			bool getOvercurrent() const throw() { return status & USB_VHCI_PORT_STAT_OVERCURRENT; }
+			bool getReset()       const throw() { return status & USB_VHCI_PORT_STAT_RESET; }
+			bool getPower()       const throw() { return status & USB_VHCI_PORT_STAT_POWER; }
+			bool getLowSpeed()    const throw() { return status & USB_VHCI_PORT_STAT_LOW_SPEED; }
+			bool getHighSpeed()   const throw() { return status & USB_VHCI_PORT_STAT_HIGH_SPEED; }
+			void setConnection(bool value) throw()
+			{ status = (status & ~USB_VHCI_PORT_STAT_CONNECTION) |  (value ? USB_VHCI_PORT_STAT_CONNECTION : 0); }
+			void setEnable(bool value) throw()
+			{ status = (status & ~USB_VHCI_PORT_STAT_ENABLE) |      (value ? USB_VHCI_PORT_STAT_ENABLE : 0); }
+			void setSuspend(bool value) throw()
+			{ status = (status & ~USB_VHCI_PORT_STAT_SUSPEND) |     (value ? USB_VHCI_PORT_STAT_SUSPEND : 0); }
+			void setOvercurrent(bool value) throw()
+			{ status = (status & ~USB_VHCI_PORT_STAT_OVERCURRENT) | (value ? USB_VHCI_PORT_STAT_OVERCURRENT : 0); }
+			void setReset(bool value) throw()
+			{ status = (status & ~USB_VHCI_PORT_STAT_RESET) |       (value ? USB_VHCI_PORT_STAT_RESET : 0); }
+			void setPower(bool value) throw()
+			{ status = (status & ~USB_VHCI_PORT_STAT_POWER) |       (value ? USB_VHCI_PORT_STAT_POWER: 0); }
+			void setLowSpeed(bool value) throw()
+			{ status = (status & ~USB_VHCI_PORT_STAT_LOW_SPEED) |   (value ? USB_VHCI_PORT_STAT_LOW_SPEED : 0); }
+			void setHighSpeed(bool value) throw()
+			{ status = (status & ~USB_VHCI_PORT_STAT_HIGH_SPEED) |  (value ? USB_VHCI_PORT_STAT_HIGH_SPEED : 0); }
+			bool getConnectionChanged()  const throw() { return change & USB_VHCI_PORT_STAT_C_CONNECTION; }
+			bool getEnableChanged()      const throw() { return change & USB_VHCI_PORT_STAT_C_ENABLE; }
+			bool getSuspendChanged()     const throw() { return change & USB_VHCI_PORT_STAT_C_SUSPEND; }
+			bool getOvercurrentChanged() const throw() { return change & USB_VHCI_PORT_STAT_C_OVERCURRENT; }
+			bool getResetChanged()       const throw() { return change & USB_VHCI_PORT_STAT_C_RESET; }
+			void setConnectionChanged(bool value) throw()
+			{ change = (change & ~USB_VHCI_PORT_STAT_C_CONNECTION) |  (value ? USB_VHCI_PORT_STAT_C_CONNECTION : 0); }
+			void setEnableChanged(bool value) throw()
+			{ change = (change & ~USB_VHCI_PORT_STAT_C_ENABLE) |      (value ? USB_VHCI_PORT_STAT_C_ENABLE : 0); }
+			void setSuspendChanged(bool value) throw()
+			{ change = (change & ~USB_VHCI_PORT_STAT_C_SUSPEND) |     (value ? USB_VHCI_PORT_STAT_C_SUSPEND : 0); }
+			void setOvercurrentChanged(bool value) throw()
+			{ change = (change & ~USB_VHCI_PORT_STAT_C_OVERCURRENT) | (value ? USB_VHCI_PORT_STAT_C_OVERCURRENT : 0); }
+			void setResetChanged(bool value) throw()
+			{ change = (change & ~USB_VHCI_PORT_STAT_C_RESET) |       (value ? USB_VHCI_PORT_STAT_C_RESET : 0); }
+		};
 
-			urb_type getType() { return static_cast<urb_type>(type); }
+#define USB_VHCI_PORT_STAT_TRIGGER_DISABLE   0x01
+#define USB_VHCI_PORT_STAT_TRIGGER_SUSPEND   0x02
+#define USB_VHCI_PORT_STAT_TRIGGER_RESUMING  0x04
+#define USB_VHCI_PORT_STAT_TRIGGER_RESET     0x08
+#define USB_VHCI_PORT_STAT_TRIGGER_POWER_ON  0x10
+#define USB_VHCI_PORT_STAT_TRIGGER_POWER_OFF 0x20
+
+		class work
+		{
+		private:
+			uint8_t port;
+			bool canceled;
+
+			work() throw();
+
+		protected:
+			work(uint8_t port) throw(std::invalid_argument);
+
+		public:
+			virtual ~work() throw();
+			uint8_t getPort() const throw() { return port; }
+			bool isCanceled() const throw() { return canceled; }
+			void cancel() throw();
+		};
+
+		class processUrbWork : work
+		{
+		private:
+			usb::urb* urb;
+
+			processUrbWork(const processUrbWork&) throw();
+			processUrbWork& operator=(const processUrbWork&) throw();
+
+		public:
+			processUrbWork(uint8_t port, usb::urb* urb) throw(std::invalid_argument);
+			usb::urb* getUrb() const throw() { return urb; }
+		};
+
+		class cancelUrbWork : work
+		{
+		private:
+			uint64_t handle;
+
+		public:
+			cancelUrbWork(uint8_t port, uint64_t handle) throw(std::invalid_argument);
+			uint64_t getHandle() const throw() { return handle; }
+		};
+
+		class portStatWork : work
+		{
+		private:
+			portStat stat;
+			uint8_t triggerFlags;
+
+		public:
+			portStatWork(uint8_t port, const portStat& stat) throw(std::invalid_argument);
+			portStatWork(uint8_t port, const portStat& stat, const portStat& prev) throw(std::invalid_argument);
+			const portStat& getPortStat() const throw() { return stat; }
+			uint8_t getTriggerFlags()     const throw() { return triggerFlags; }
+			bool triggersDisable()  const throw() { return triggerFlags & USB_VHCI_PORT_STAT_TRIGGER_DISABLE; }
+			bool triggersSuspend()  const throw() { return triggerFlags & USB_VHCI_PORT_STAT_TRIGGER_SUSPEND; }
+			bool triggersResuming() const throw() { return triggerFlags & USB_VHCI_PORT_STAT_TRIGGER_RESUMING; }
+			bool triggersReset()    const throw() { return triggerFlags & USB_VHCI_PORT_STAT_TRIGGER_RESET; }
+			bool triggersPowerOn()  const throw() { return triggerFlags & USB_VHCI_PORT_STAT_TRIGGER_POWER_ON; }
+			bool triggersPowerOff() const throw() { return triggerFlags & USB_VHCI_PORT_STAT_TRIGGER_POWER_OFF; }
+		};
+
+		class hcd
+		{
+		private:
+			uint8_t port_count;
+
+			hcd() throw();
+			hcd(const hcd&) throw();
+			hcd& operator=(const hcd&) throw();
+
+		public:
+			explicit hcd(uint8_t ports) throw(std::invalid_argument);
+			virtual ~hcd() throw();
+		};
+
+		class local_hcd : public hcd
+		{
+		public:
+			explicit local_hcd(uint8_t ports) throw(std::invalid_argument);
 		};
 	}
 }
