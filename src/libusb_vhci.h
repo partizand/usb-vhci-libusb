@@ -135,12 +135,35 @@ namespace usb
 	private:
 		usb_vhci_urb _urb;
 
-		urb() throw();
-		urb(const urb&) throw();
-		urb& operator=(const urb&) throw();
+		void _cpy(const usb_vhci_urb& u) throw();
+		void _chk() throw(std::invalid_argument);
 
 	public:
+		urb(const urb&) throw();
+		urb(uint64_t handle,
+		    urbType type,
+		    int32_t bufferLength,
+		    uint8_t* buffer,
+		    bool ownBuffer,
+		    int32_t isoPacketCount,
+		    usb_vhci_iso_packet* isoPackets,
+		    bool ownIsoPackets,
+		    int32_t bufferActual,
+		    int32_t status,
+		    int32_t errorCount,
+		    uint16_t flags,
+		    uint16_t interval,
+		    uint8_t devadr,
+		    uint8_t epadr,
+		    uint8_t bmRequestType,
+		    uint8_t bRequest,
+		    uint16_t wValue,
+		    uint16_t wIndex,
+		    uint16_t wLength) throw(std::invalid_argument);
+		urb(const usb_vhci_urb& urb) throw(std::invalid_argument);
+		urb(const usb_vhci_urb& urb, bool own) throw(std::invalid_argument);
 		virtual ~urb() throw();
+		urb& operator=(const urb&) throw();
 
 		const usb_vhci_urb* getInternal() const throw() { return &_urb; }
 		uint64_t getHandle() const throw() { return _urb.handle; }
@@ -171,6 +194,7 @@ namespace usb
 		void ack() throw() { setStatus(0); }
 		void stall() throw() { setStatus(-EPIPE); }
 		void setBufferActual(int32_t value) throw() { _urb.buffer_actual = value; }
+		void setIsoErrorCount(int32_t value) throw() { _urb.error_count = value; }
 		bool isShortNotOk() const throw() { return _urb.flags & USB_VHCI_URB_FLAGS_SHORT_NOT_OK; }
 		bool isZeroPacket() const throw() { return _urb.flags & USB_VHCI_URB_FLAGS_ZERO_PACKET; }
 	};
@@ -252,8 +276,6 @@ namespace usb
 			uint8_t port;
 			bool canceled;
 
-			work() throw();
-
 		protected:
 			work(uint8_t port) throw(std::invalid_argument);
 
@@ -269,11 +291,11 @@ namespace usb
 		private:
 			usb::urb* urb;
 
-			processUrbWork(const processUrbWork&) throw();
-			processUrbWork& operator=(const processUrbWork&) throw();
-
 		public:
 			processUrbWork(uint8_t port, usb::urb* urb) throw(std::invalid_argument);
+			processUrbWork(const processUrbWork&) throw();
+			processUrbWork& operator=(const processUrbWork&) throw();
+			virtual ~processUrbWork() throw();
 			usb::urb* getUrb() const throw() { return urb; }
 		};
 
@@ -311,7 +333,6 @@ namespace usb
 		private:
 			uint8_t port_count;
 
-			hcd() throw();
 			hcd(const hcd&) throw();
 			hcd& operator=(const hcd&) throw();
 

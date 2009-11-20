@@ -45,6 +45,25 @@ namespace usb
 			if(urb == NULL) throw std::invalid_argument("urb");
 		}
 
+		processUrbWork::processUrbWork(const processUrbWork& work) throw() :
+			usb::vhci::work(work),
+			urb(new usb::urb(*work.urb))
+		{
+		}
+
+		processUrbWork& processUrbWork::operator=(const processUrbWork& work) throw()
+		{
+			usb::vhci::work::operator=(work);
+			delete urb;
+			urb = new usb::urb(*work.urb);
+			return *this;
+		}
+
+		processUrbWork::~processUrbWork() throw()
+		{
+			delete urb;
+		}
+
 		cancelUrbWork::cancelUrbWork(uint8_t port, uint64_t handle) throw(std::invalid_argument) : work(port), handle(handle)
 		{
 		}
