@@ -286,7 +286,7 @@ namespace usb
 			void cancel() throw();
 		};
 
-		class processUrbWork : work
+		class processUrbWork : public work
 		{
 		private:
 			usb::urb* urb;
@@ -299,7 +299,7 @@ namespace usb
 			usb::urb* getUrb() const throw() { return urb; }
 		};
 
-		class cancelUrbWork : work
+		class cancelUrbWork : public work
 		{
 		private:
 			uint64_t handle;
@@ -309,7 +309,7 @@ namespace usb
 			uint64_t getHandle() const throw() { return handle; }
 		};
 
-		class portStatWork : work
+		class portStatWork : public work
 		{
 		private:
 			portStat stat;
@@ -339,12 +339,32 @@ namespace usb
 		public:
 			explicit hcd(uint8_t ports) throw(std::invalid_argument);
 			virtual ~hcd() throw();
+
+			uint8_t getPortCount() const throw() { return port_count; }
+			virtual work* nextWork() = 0;
 		};
 
 		class local_hcd : public hcd
 		{
+		private:
+			int fd;
+			struct _port_info
+			{
+				uint8_t adr;
+				portStat stat;
+				_port_info() throw() : adr(0), stat() { }
+			}* port_info;
+
+			local_hcd(const local_hcd&) throw();
+			local_hcd& operator=(const local_hcd&) throw();
+
+			uint8_t getPortIndex(uint8_t adr) const throw(std::exception);
+
 		public:
-			explicit local_hcd(uint8_t ports) throw(std::invalid_argument);
+			explicit local_hcd(uint8_t ports) throw(std::invalid_argument, std::exception);
+			virtual ~local_hcd() throw();
+
+			virtual work* nextWork() throw(std::exception);
 		};
 	}
 }
