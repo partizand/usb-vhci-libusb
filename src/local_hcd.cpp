@@ -26,7 +26,7 @@ namespace usb
 {
 	namespace vhci
 	{
-		uint8_t local_hcd::getPortIndex(uint8_t adr) const throw(std::exception)
+		uint8_t local_hcd::port_from_address(uint8_t adr) const throw(std::exception)
 		{
 			for(uint8_t i = 0; i < getPortCount(); i++)
 				if(port_info[i].adr == adr)

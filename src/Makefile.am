@@ -16,5 +16,5 @@ libusb_vhci_la_LDFLAGS = $(all_libraries)
 
 include_HEADERS = libusb_vhci.h
 
-AM_CFLAGS = -std=c99 -Wall
-AM_CXXFLAGS = -fno-enforce-eh-specs -Wall -Weffc++ -Wold-style-cast -Woverloaded-virtual -Wsign-promo -Wstrict-null-sentinel
+AM_CFLAGS = -pthread -std=c99 -Wall
+AM_CXXFLAGS = -pthread -fno-enforce-eh-specs -Wall -Weffc++ -Wold-style-cast -Woverloaded-virtual -Wsign-promo -Wstrict-null-sentinel
