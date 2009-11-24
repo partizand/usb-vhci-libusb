@@ -3,7 +3,7 @@ libusb_vhci_la_SOURCES = \
 libusb_vhci.c \
 vhci-hcd.h \
 urb.cpp \
-portStat.cpp \
+port_stat.cpp \
 work.cpp \
 hcd.cpp \
 local_hcd.cpp

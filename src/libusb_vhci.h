@@ -35,6 +35,9 @@
 
 #ifdef __cplusplus
 extern "C" {
+#ifndef __NO_THROW
+#define __NO_THROW throw()
+#endif
 #endif
 
 struct usb_vhci_iso_packet
@@ -104,12 +107,12 @@ struct usb_vhci_work
 int usb_vhci_open(uint8_t port_count,
                   int32_t *id,
                   int32_t *usb_busnum,
-                  char    *bus_id);
-int usb_vhci_close(int fd);
-int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work);
-int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb);
-int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb);
-int usb_vhci_update_port_stat(int fd, struct usb_vhci_port_stat stat);
+                  char    *bus_id) __NO_THROW;
+int usb_vhci_close(int fd) __NO_THROW;
+int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work) __NO_THROW;
+int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb) __NO_THROW;
+int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb) __NO_THROW;
+int usb_vhci_update_port_stat(int fd, struct usb_vhci_port_stat stat) __NO_THROW;
 
 #ifdef __cplusplus
 } // extern "C"
@@ -138,11 +141,11 @@ namespace usb
 	private:
 		usb_vhci_urb _urb;
 
-		void _cpy(const usb_vhci_urb& u) throw();
+		void _cpy(const usb_vhci_urb& u) throw(std::bad_alloc);
 		void _chk() throw(std::invalid_argument);
 
 	public:
-		urb(const urb&) throw();
+		urb(const urb&) throw(std::bad_alloc);
 		urb(uint64_t handle,
 		    urb_type type,
 		    int32_t buffer_length,
@@ -162,11 +165,11 @@ namespace usb
 		    uint8_t bRequest,
 		    uint16_t wValue,
 		    uint16_t wIndex,
-		    uint16_t wLength) throw(std::invalid_argument);
-		urb(const usb_vhci_urb& urb) throw(std::invalid_argument);
-		urb(const usb_vhci_urb& urb, bool own) throw(std::invalid_argument);
+		    uint16_t wLength) throw(std::invalid_argument, std::bad_alloc);
+		urb(const usb_vhci_urb& urb) throw(std::invalid_argument, std::bad_alloc);
+		urb(const usb_vhci_urb& urb, bool own) throw(std::invalid_argument, std::bad_alloc);
 		virtual ~urb() throw();
-		urb& operator=(const urb&) throw();
+		urb& operator=(const urb&) throw(std::bad_alloc);
 
 		const usb_vhci_urb* get_internal() const throw() { return &_urb; }
 		uint64_t get_handle() const throw() { return _urb.handle; }
@@ -204,6 +207,26 @@ namespace usb
 
 	namespace vhci
 	{
+		class lock
+		{
+		private:
+			pthread_mutex_t& mutex;
+
+			lock& operator=(const lock&) throw();
+			lock(const lock&) throw();
+
+		public:
+			lock(pthread_mutex_t& mutex) throw() : mutex(mutex)
+			{
+				pthread_mutex_lock(&mutex);
+			}
+
+			~lock() throw()
+			{
+				pthread_mutex_unlock(&mutex);
+			}
+		};
+
 		class port_stat
 		{
 		private:
@@ -213,8 +236,10 @@ namespace usb
 
 		public:
 			port_stat() throw() : status(0), change(0), flags(0) { }
-			port_stat(uint16_t status, uint16_t change, uint8_t flags) throw()
-				: status(status), change(change), flags(flags) { };
+			port_stat(uint16_t status, uint16_t change, uint8_t flags) throw() :
+				status(status),
+				change(change),
+				flags(flags) { }
 			virtual ~port_stat() throw();
 			uint16_t get_status() const throw() { return status; }
 			uint16_t get_change() const throw() { return change; }
@@ -296,8 +321,8 @@ namespace usb
 
 		public:
 			process_urb_work(uint8_t port, usb::urb* urb) throw(std::invalid_argument);
-			process_urb_work(const process_urb_work&) throw();
-			process_urb_work& operator=(const process_urb_work&) throw();
+			process_urb_work(const process_urb_work&) throw(std::bad_alloc);
+			process_urb_work& operator=(const process_urb_work&) throw(std::bad_alloc);
 			virtual ~process_urb_work() throw();
 			usb::urb* get_urb() const throw() { return urb; }
 		};
@@ -334,13 +359,14 @@ namespace usb
 		class hcd
 		{
 		private:
-			std::vector<void (*)(hcd&)> work_enqueued_callbacks;
+			std::vector<void *(hcd&) throw()> work_enqueued_callbacks;
 
 			pthread_t bg_thread;
 			volatile bool thread_shutdown;
-			uint8_t port_count;
 			pthread_mutex_t thread_sync;
 
+			uint8_t port_count;
+			pthread_mutex_t _lock;
 			std::queue<work*> inbox;
 			std::list<work*> processing;
 
@@ -348,18 +374,22 @@ namespace usb
 			hcd& operator=(const hcd&) throw();
 
 		protected:
-			explicit hcd(uint8_t ports) throw(std::invalid_argument);
+			explicit hcd(uint8_t ports) throw(std::invalid_argument, std::bad_alloc);
 			virtual void bg_work() throw() = 0;
 			virtual uint8_t address_from_port(uint8_t port) const throw(std::exception) = 0;
 			virtual uint8_t port_from_address(uint8_t address) const throw(std::exception) = 0;
 			virtual void canceling_work(work* work, bool in_progress) throw(std::exception);
 			virtual void finishing_work(work* work) throw(std::exception);
+			virtual void on_work_enqueued() throw();
+			void enqueue_work(work* work) throw(std::bad_alloc);
+			void init_bg_thread() throw();
+			void join_bg_thread() throw();
 
 		public:
 			virtual ~hcd() throw();
 
-			void add_work_enqueued_callback(void (*callback)(hcd&)) throw();
-			void remove_work_enqueued_callback(void (*callback)(hcd&)) throw();
+			void add_work_enqueued_callback(void *callback(hcd&) throw()) throw(std::bad_alloc);
+			void remove_work_enqueued_callback(void *callback(hcd&) throw()) throw(std::bad_alloc);
 			virtual port_stat get_port_stat(uint8_t port) const throw(std::exception) = 0;
 			virtual void port_connect(uint8_t port, usb::data_rate rate) throw(std::exception) = 0;
 			virtual void port_disconnect(uint8_t port) throw(std::exception) = 0;
@@ -389,7 +419,7 @@ namespace usb
 			uint8_t port_from_address(uint8_t adr) const throw(std::exception);
 
 		public:
-			explicit local_hcd(uint8_t ports) throw(std::invalid_argument, std::exception);
+			explicit local_hcd(uint8_t ports) throw(std::exception);
 			virtual ~local_hcd() throw();
 
 			virtual work* next_work() throw(std::exception);

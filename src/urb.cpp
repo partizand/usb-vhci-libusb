@@ -26,7 +26,7 @@
 
 namespace usb
 {
-	void urb::_cpy(const usb_vhci_urb& u) throw()
+	void urb::_cpy(const usb_vhci_urb& u) throw(std::bad_alloc)
 	{
 		if(_urb.buffer_length)
 		{
@@ -58,7 +58,7 @@ namespace usb
 		}
 	}
 
-	urb::urb(const urb& urb) throw() : _urb(urb._urb)
+	urb::urb(const urb& urb) throw(std::bad_alloc) : _urb(urb._urb)
 	{
 		_urb.buffer = NULL;
 		_urb.iso_packets = NULL;
@@ -66,16 +66,16 @@ namespace usb
 	}
 
 	urb::urb(uint64_t handle,
-	         urbType type,
-	         int32_t bufferLength,
+	         urb_type type,
+	         int32_t buffer_length,
 	         uint8_t* buffer,
-	         bool ownBuffer,
-	         int32_t isoPacketCount,
-	         usb_vhci_iso_packet* isoPackets,
-	         bool ownIsoPackets,
-	         int32_t bufferActual,
+	         bool own_buffer,
+	         int32_t iso_packet_count,
+	         usb_vhci_iso_packet* iso_packets,
+	         bool own_iso_packets,
+	         int32_t buffer_actual,
 	         int32_t status,
-	         int32_t errorCount,
+	         int32_t error_count,
 	         uint16_t flags,
 	         uint16_t interval,
 	         uint8_t devadr,
@@ -84,17 +84,17 @@ namespace usb
 	         uint8_t bRequest,
 	         uint16_t wValue,
 	         uint16_t wIndex,
-	         uint16_t wLength) throw(std::invalid_argument) : _urb()
+	         uint16_t wLength) throw(std::invalid_argument, std::bad_alloc) : _urb()
 	{
 		_urb.handle = handle;
-		_urb.buffer_length = bufferLength;
-		_urb.buffer_actual = bufferActual;
+		_urb.buffer_length = buffer_length;
+		_urb.buffer_actual = buffer_actual;
 		_urb.status = status;
 		_urb.flags = flags;
 		_urb.interval = interval;
 		_urb.devadr = devadr;
 		_urb.epadr = epadr;
-		if(type != utControl)
+		if(type != urb_type_control)
 		{
 			if(bmRequestType) throw std::invalid_argument("bmRequestType");
 			if(bRequest)      throw std::invalid_argument("bRequest");
@@ -102,43 +102,43 @@ namespace usb
 			if(wIndex)        throw std::invalid_argument("wIndex");
 			if(wLength)       throw std::invalid_argument("wLength");
 		}
-		if(type != utIsochronous)
+		if(type != urb_type_isochronous)
 		{
-			if(isoPacketCount) throw std::invalid_argument("isoPacketCount");
-			if(isoPackets)     throw std::invalid_argument("isoPackets");
-			if(errorCount)     throw std::invalid_argument("errorCount");
+			if(iso_packet_count) throw std::invalid_argument("iso_packet_count");
+			if(iso_packets)     throw std::invalid_argument("iso_packets");
+			if(error_count)     throw std::invalid_argument("error_count");
 		}
 		switch(type)
 		{
-		case utIsochronous:
+		case urb_type_isochronous:
 			_urb.type = USB_VHCI_URB_TYPE_ISO;
-			_urb.packet_count = isoPacketCount;
-			_urb.error_count = errorCount;
-			if(isoPacketCount)
+			_urb.packet_count = iso_packet_count;
+			_urb.error_count = error_count;
+			if(iso_packet_count)
 			{
-				if(!bufferLength) throw std::invalid_argument("isoPacketCount");
-				if(isoPackets)
+				if(!buffer_length) throw std::invalid_argument("iso_packet_count");
+				if(iso_packets)
 				{
-					if(ownIsoPackets)
+					if(own_iso_packets)
 					{
-						_urb.iso_packets = isoPackets;
+						_urb.iso_packets = iso_packets;
 					}
 					else
 					{
-						_urb.iso_packets = new usb_vhci_iso_packet[isoPacketCount];
-						std::copy(isoPackets, isoPackets + isoPacketCount, _urb.iso_packets);
+						_urb.iso_packets = new usb_vhci_iso_packet[iso_packet_count];
+						std::copy(iso_packets, iso_packets + iso_packet_count, _urb.iso_packets);
 					}
 				}
 				else
 				{
-					throw std::invalid_argument("isoPackets");
+					throw std::invalid_argument("iso_packets");
 				}
 			}
 			break;
-		case utInterrupt:
+		case urb_type_interrupt:
 			_urb.type = USB_VHCI_URB_TYPE_INT;
 			break;
-		case utControl:
+		case urb_type_control:
 			_urb.type = USB_VHCI_URB_TYPE_CONTROL;
 			_urb.bmRequestType = bmRequestType;
 			_urb.bRequest = bRequest;
@@ -146,35 +146,35 @@ namespace usb
 			_urb.wIndex = wIndex;
 			_urb.wLength = wLength;
 			break;
-		case utBulk:
+		case urb_type_bulk:
 			_urb.type = USB_VHCI_URB_TYPE_BULK;
 			if(interval) throw std::invalid_argument("interval");
 			break;
 		default:
 			throw std::invalid_argument("type");
 		}
-		if(bufferLength)
+		if(buffer_length)
 		{
 			if(buffer)
 			{
-				if(ownBuffer)
+				if(own_buffer)
 				{
 					_urb.buffer = buffer;
 				}
 				else
 				{
-					_urb.buffer = new uint8_t[bufferLength];
-					std::copy(buffer, buffer + bufferLength, _urb.buffer);
+					_urb.buffer = new uint8_t[buffer_length];
+					std::copy(buffer, buffer + buffer_length, _urb.buffer);
 				}
 			}
 			else
 			{
-				_urb.buffer = new uint8_t[bufferLength];
+				_urb.buffer = new uint8_t[buffer_length];
 			}
 		}
 	}
 
-	urb::urb(const usb_vhci_urb& urb) throw(std::invalid_argument) : _urb(urb)
+	urb::urb(const usb_vhci_urb& urb) throw(std::invalid_argument, std::bad_alloc) : _urb(urb)
 	{
 		_urb.buffer = NULL;
 		_urb.iso_packets = NULL;
@@ -182,7 +182,7 @@ namespace usb
 		_cpy(urb);
 	}
 
-	urb::urb(const usb_vhci_urb& urb, bool own) throw(std::invalid_argument) : _urb(urb)
+	urb::urb(const usb_vhci_urb& urb, bool own) throw(std::invalid_argument, std::bad_alloc) : _urb(urb)
 	{
 		if(!own)
 		{
@@ -204,17 +204,17 @@ namespace usb
 	urb::~urb() throw()
 	{
 		if(_urb.buffer)
-			delete [] _urb.buffer;
+			delete[] _urb.buffer;
 		if(_urb.iso_packets)
-			delete [] _urb.iso_packets;
+			delete[] _urb.iso_packets;
 	}
 
-	urb& urb::operator=(const urb& urb) throw()
+	urb& urb::operator=(const urb& urb) throw(std::bad_alloc)
 	{
 		if(_urb.buffer)
-			delete [] _urb.buffer;
+			delete[] _urb.buffer;
 		if(_urb.iso_packets)
-			delete [] _urb.iso_packets;
+			delete[] _urb.iso_packets;
 		_urb = urb._urb;
 		_urb.buffer = NULL;
 		_urb.iso_packets = NULL;

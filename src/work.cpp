@@ -40,18 +40,20 @@ namespace usb
 			canceled = true;
 		}
 
-		processUrbWork::processUrbWork(uint8_t port, usb::urb* urb) throw(std::invalid_argument) : work(port), urb(urb)
+		process_urb_work::process_urb_work(uint8_t port, usb::urb* urb) throw(std::invalid_argument) :
+			work(port),
+			urb(urb)
 		{
-			if(urb == NULL) throw std::invalid_argument("urb");
+			if(!urb) throw std::invalid_argument("urb");
 		}
 
-		processUrbWork::processUrbWork(const processUrbWork& work) throw() :
+		process_urb_work::process_urb_work(const process_urb_work& work) throw(std::bad_alloc) :
 			usb::vhci::work(work),
 			urb(new usb::urb(*work.urb))
 		{
 		}
 
-		processUrbWork& processUrbWork::operator=(const processUrbWork& work) throw()
+		process_urb_work& process_urb_work::operator=(const process_urb_work& work) throw(std::bad_alloc)
 		{
 			usb::vhci::work::operator=(work);
 			delete urb;
@@ -59,29 +61,37 @@ namespace usb
 			return *this;
 		}
 
-		processUrbWork::~processUrbWork() throw()
+		process_urb_work::~process_urb_work() throw()
 		{
 			delete urb;
 		}
 
-		cancelUrbWork::cancelUrbWork(uint8_t port, uint64_t handle) throw(std::invalid_argument) : work(port), handle(handle)
+		cancel_urb_work::cancel_urb_work(uint8_t port, uint64_t handle) throw(std::invalid_argument) :
+			work(port),
+			handle(handle)
 		{
 		}
 
-		portStatWork::portStatWork(uint8_t port, const portStat& stat) throw(std::invalid_argument)
-			: work(port), stat(stat), triggerFlags(0)
+		port_stat_work::port_stat_work(uint8_t port, const port_stat& stat) throw(std::invalid_argument) :
+			work(port),
+			stat(stat),
+			trigger_flags(0)
 		{
 		}
 
-		portStatWork::portStatWork(uint8_t port, const portStat& stat, const portStat& prev) throw(std::invalid_argument)
-			: work(port), stat(stat), triggerFlags(0)
+		port_stat_work::port_stat_work(uint8_t port,
+		                               const port_stat& stat,
+		                               const port_stat& prev) throw(std::invalid_argument) :
+			work(port),
+			stat(stat),
+			trigger_flags(0)
 		{
-			if(!stat.getEnable() && prev.getEnable())     triggerFlags |= USB_VHCI_PORT_STAT_TRIGGER_DISABLE;
-			if(stat.getSuspend() && !prev.getSuspend())   triggerFlags |= USB_VHCI_PORT_STAT_TRIGGER_SUSPEND;
-			if(stat.getResuming() && !prev.getResuming()) triggerFlags |= USB_VHCI_PORT_STAT_TRIGGER_RESUMING;
-			if(stat.getReset() && !prev.getReset())       triggerFlags |= USB_VHCI_PORT_STAT_TRIGGER_RESET;
-			if(stat.getPower() && !prev.getPower())       triggerFlags |= USB_VHCI_PORT_STAT_TRIGGER_POWER_ON;
-			else if(!stat.getPower() && prev.getPower())  triggerFlags |= USB_VHCI_PORT_STAT_TRIGGER_POWER_OFF;
+			if(!stat.get_enable() && prev.get_enable())     trigger_flags |= USB_VHCI_PORT_STAT_TRIGGER_DISABLE;
+			if(stat.get_suspend() && !prev.get_suspend())   trigger_flags |= USB_VHCI_PORT_STAT_TRIGGER_SUSPEND;
+			if(stat.get_resuming() && !prev.get_resuming()) trigger_flags |= USB_VHCI_PORT_STAT_TRIGGER_RESUMING;
+			if(stat.get_reset() && !prev.get_reset())       trigger_flags |= USB_VHCI_PORT_STAT_TRIGGER_RESET;
+			if(stat.get_power() && !prev.get_power())       trigger_flags |= USB_VHCI_PORT_STAT_TRIGGER_POWER_ON;
+			else if(!stat.get_power() && prev.get_power())  trigger_flags |= USB_VHCI_PORT_STAT_TRIGGER_POWER_OFF;
 		}
 	}
 }
