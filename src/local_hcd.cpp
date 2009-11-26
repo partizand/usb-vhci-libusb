@@ -53,7 +53,7 @@ namespace usb
 		{
 			join_bg_thread();
 			usb_vhci_close(fd);
-			if(port_info) delete[] port_info;
+			delete[] port_info;
 		}
 
 		// caller has _lock
