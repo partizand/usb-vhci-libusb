@@ -53,7 +53,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libusb_vhci_la_LIBADD =
-am_libusb_vhci_la_OBJECTS = libusb_vhci.lo urb.lo portStat.lo work.lo \
+am_libusb_vhci_la_OBJECTS = libusb_vhci.lo urb.lo port_stat.lo work.lo \
 	hcd.lo local_hcd.lo
 libusb_vhci_la_OBJECTS = $(am_libusb_vhci_la_OBJECTS)
 libusb_vhci_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -208,7 +208,7 @@ libusb_vhci_la_SOURCES = \
 libusb_vhci.c \
 vhci-hcd.h \
 urb.cpp \
-portStat.cpp \
+port_stat.cpp \
 work.cpp \
 hcd.cpp \
 local_hcd.cpp
@@ -294,7 +294,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hcd.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/local_hcd.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/portStat.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/port_stat.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/urb.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/work.Plo@am__quote@
 

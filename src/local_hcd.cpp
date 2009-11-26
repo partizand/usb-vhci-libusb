@@ -20,76 +20,404 @@
 #include <config.h>
 #endif
 
+#include <stdlib.h>
+#include <new>
 #include "libusb_vhci.h"
 
 namespace usb
 {
 	namespace vhci
 	{
-		uint8_t local_hcd::port_from_address(uint8_t adr) const throw(std::exception)
+		local_hcd::local_hcd(uint8_t ports) throw(std::exception) :
+			hcd(ports),
+			fd(-1),
+			id(),
+			usb_bus_num(),
+			bus_id(),
+			port_info(NULL)
 		{
-			for(uint8_t i = 0; i < getPortCount(); i++)
-				if(port_info[i].adr == adr)
-					return i;
-			throw std::exception();
-		}
-
-		local_hcd::local_hcd(uint8_t ports) throw(std::invalid_argument, std::exception) : hcd(ports), fd(-1), port_info(NULL)
-		{
-			fd = usb_vhci_open(ports, NULL, NULL, NULL);
+			uint8_t c = get_port_count();
+			char* _bus_id(NULL);
+			fd = usb_vhci_open(c, &id, &usb_bus_num, &_bus_id);
 			if(fd == -1) throw std::exception();
-			port_info = new _port_info[ports];
+			if(_bus_id)
+			{
+				bus_id.assign(_bus_id);
+				free(_bus_id);
+			}
+			if(c) port_info = new _port_info[c];
+			init_bg_thread();
 		}
 
 		local_hcd::~local_hcd() throw()
 		{
-			delete[] port_info;
+			join_bg_thread();
 			usb_vhci_close(fd);
+			if(port_info) delete[] port_info;
 		}
 
-		work* local_hcd::nextWork() throw(std::exception)
+		// caller has _lock
+		uint8_t local_hcd::address_from_port(uint8_t port) const throw(std::invalid_argument, std::out_of_range)
 		{
+			if(!port) throw std::invalid_argument("port");
+			if(port > get_port_count()) throw std::out_of_range("port");
+			return port_info[port - 1].adr;
+		}
+
+		// caller has _lock
+		uint8_t local_hcd::port_from_address(uint8_t address) const throw(std::invalid_argument)
+		{
+			if(address > 0x7f) throw std::invalid_argument("address");
+			for(uint8_t i(0); i < get_port_count(); i++)
+				if(port_info[i].adr == address)
+					return i + 1;
+			return 0;
+		}
+
+		void local_hcd::bg_work() volatile throw()
+		{
+			local_hcd& _this(const_cast<local_hcd&>(*this));
 			usb_vhci_work w;
-			int res = usb_vhci_fetch_work(fd, &w);
+			int res(usb_vhci_fetch_work(_this.fd, &w));
 			if(res == -1)
 			{
 				if(errno == ETIMEDOUT || errno == EINTR || errno == ENODATA)
-					return NULL;
-				throw std::exception();
+					return;
+				// TODO: debug msg
+				return;
 			}
+			uint8_t index;
 			switch(w.type)
 			{
 			case USB_VHCI_WORK_TYPE_PORT_STAT:
 			{
-				portStat p(w.work.port_stat.status,
-				           w.work.port_stat.change,
-				           w.work.port_stat.flags);
-				portStat prev = port_info[w.work.port_stat.index].stat;
-				port_info[w.work.port_stat.index].stat = p;
-				return new portStatWork(w.work.port_stat.index, p, prev);
-			}
+				index = w.work.port_stat.index;
+				port_stat nps(w.work.port_stat.status,
+				              w.work.port_stat.change,
+				              w.work.port_stat.flags);
+				// TODO: debug msg
+				if(!index || index > _this.get_port_count())
+					break;
+				bool nomem_retry(false);
+				port_stat_work* psw(NULL);
+			retry_ps:
+				if(nomem_retry)
+				{
+					sleep(100);
+					if(is_thread_shutdown())
+					{
+						delete psw;
+						return;
+					}
+				}
+				else
+				{
+					nomem_retry = true;
+				}
+				lock _(get_lock()); //  vvvv LOCKED vvvv  --  ^^^^ NOT LOCKED ^^^^
+				try
+				{
+					if(!psw) psw = new port_stat_work(index, nps, _this.port_info[index - 1].stat);
+					else
+					{
+						// reuse already allocated mem
+						psw->~port_stat_work();
+						new(psw) port_stat_work(index, nps, _this.port_info[index - 1].stat);
+					}
+					_this.enqueue_work(psw);
+				}
+				catch(std::bad_alloc)
+				{
+					// jump outside the lock and wait for others to free mem
+					goto retry_ps;
+				}
+				_this.port_info[index - 1].stat = nps;
+				if(nps.get_connection_changed())
+				{
+					// invalidate address on CONNECTION state change
+					_this.port_info[index - 1].adr = 0xff;
+				}
+				if(nps.get_reset_changed() && !nps.get_reset() && nps.get_enable())
+				{
+					// set address to 0 after successfull RESET
+					_this.port_info[index - 1].adr = 0x00;
+				}
+				// TODO: do we need to check for any other state changes here?
+				_this.on_work_enqueued();
+				break;
+			} //  vvvv NOT LOCKED vvvv  --  ^^^^ LOCKED ^^^^
 			case USB_VHCI_WORK_TYPE_PROCESS_URB:
 			{
+				bool nomem_retry(false);
+				process_urb_work* puw(NULL);
+			retry_pu:
+				if(nomem_retry)
+				{
+					sleep(100);
+					if(is_thread_shutdown())
+					{
+						delete puw; // dtor of puw deletes the urb and the data buffers, too
+						return;
+					}
+				}
+				else
+				{
+					nomem_retry = true;
+				}
 				if(w.work.urb.buffer_length)
-					w.work.urb.buffer = new uint8_t[w.work.urb.buffer_length];
+				{
+					do
+					{
+						w.work.urb.buffer = new(std::nothrow) uint8_t[w.work.urb.buffer_length];
+						if(!w.work.urb.buffer)
+						{
+							// wait for others to free mem
+							sleep(100);
+							if(is_thread_shutdown()) return;
+						}
+					} while(!w.work.urb.buffer);
+				}
 				if(w.work.urb.packet_count)
-					w.work.urb.iso_packets = new usb_vhci_iso_packet[w.work.urb.packet_count];
-				usb::urb* u(new usb::urb(w.work.urb, true));
+				{
+					do
+					{
+						w.work.urb.iso_packets = new(std::nothrow) usb_vhci_iso_packet[w.work.urb.packet_count];
+						if(!w.work.urb.iso_packets)
+						{
+							// wait for others to free mem
+							sleep(100);
+							if(is_thread_shutdown()) return;
+						}
+					} while(!w.work.urb.iso_packets);
+				}
+				usb::urb* u(NULL);
+				while(!u)
+				{
+					if(!(u = new(std::nothrow) usb::urb(w.work.urb, true)))
+					{
+						// wait for others to free mem
+						sleep(100);
+						if(is_thread_shutdown()) return;
+					}
+				}
 				if(res)
 				{
-					res = usb_vhci_fetch_data(fd, u->getInternal());
+					res = usb_vhci_fetch_data(fd, u->get_internal());
 					if(res == -1)
 					{
 						delete u;
-						throw std::exception();
+						// TODO: debug msg
+						//if(errno == ECANCELED) {} else {}
+						break;
 					}
 				}
-				return new processUrbWork(getPortIndex(w.work.urb.devadr), u);
-			}
+				lock _(get_lock()); //  vvvv LOCKED vvvv  --  ^^^^ NOT LOCKED ^^^^
+				index = _this.port_from_address(w.work.urb.devadr);
+				// TODO: debug msg
+				if(!index)
+				{
+					delete puw; // dtor of puw deletes the urb and the data buffers, too
+					break;
+				}
+				if(!puw)
+				{
+					if(!(puw = new(std::nothrow) process_urb_work(index, u)))
+					{
+						// jump outside the lock and wait for others to free mem
+						goto retry_pu;
+					}
+				}
+				else
+				{
+					// reuse already allocated mem
+					puw->~process_urb_work();
+					new(puw) process_urb_work(index, u);
+				}
+				uint8_t rollback_address(_this.port_info[index - 1].adr);
+				if(u->is_control())
+				{
+					// SET_ADDRESS?
+					if(!u->get_endpoint_number() &&
+					   !u->get_bmRequestType() &&
+					   u->get_bRequest() == 5)
+					{
+						uint16_t val(u->get_wValue());
+						if(val > 0x7f)
+							u->stall();
+						else
+						{
+							u->ack();
+							_this.port_info[index - 1].adr = static_cast<uint8_t>(val);
+						}
+					}
+				}
+				try
+				{
+					_this.enqueue_work(puw);
+				}
+				catch(std::bad_alloc)
+				{
+					// rollback changes on 'this'
+					_this.port_info[index - 1].adr = rollback_address;
+					// jump outside the lock and wait for others to free mem
+					goto retry_pu;
+				}
+				_this.on_work_enqueued();
+				break;
+			} //  vvvv NOT LOCKED vvvv  --  ^^^^ LOCKED ^^^^
 			case USB_VHCI_WORK_TYPE_CANCEL_URB:
-				return new cancelUrbWork(0, w.work.handle);
+			{
+				cancel_urb_work* cuw(NULL);
+				while(!cuw)
+				{
+					if(!(cuw = new(std::nothrow) cancel_urb_work(0, w.work.handle)))
+					{
+						// wait for others to free mem
+						sleep(100);
+						if(is_thread_shutdown()) return;
+					}
+				}
+			retry_cu:
+				try
+				{
+					cancel_process_urb_work(w.work.handle);
+				}
+				catch(std::bad_alloc)
+				{
+					// wait for others to free mem
+					sleep(100);
+					if(is_thread_shutdown())
+					{
+						delete cuw;
+						return;
+					}
+					goto retry_cu;
+				}
+				catch(...)
+				{
+					delete cuw;
+					// TODO: debug msg
+					return;
+				}
+				break;
 			}
-			throw std::exception();
+			}
+		}
+
+		// caller has _lock
+		void local_hcd::canceling_work(work* w, bool in_progress) throw(std::exception)
+		{
+			process_urb_work* uw;
+			if(in_progress && (uw = dynamic_cast<process_urb_work*>(w)))
+			{
+				cancel_urb_work* cw = new cancel_urb_work(uw->get_port(), uw->get_urb()->get_handle());
+				try { enqueue_work(cw); }
+				catch(...)
+				{
+					delete cw;
+					throw;
+				}
+				on_work_enqueued();
+			}
+		}
+
+		// caller has _lock
+		void local_hcd::finishing_work(work* w) throw(std::exception)
+		{
+			process_urb_work* uw(dynamic_cast<process_urb_work*>(w));
+			if(uw)
+			{
+				const usb::urb* urb(uw->get_urb());
+				if(usb_vhci_giveback(fd, urb->get_internal()) == -1)
+				{
+					// TODO: debug msg
+				}
+			}
+		}
+
+		const port_stat& local_hcd::get_port_stat(uint8_t port) volatile throw(std::invalid_argument, std::out_of_range)
+		{
+			if(!port) throw std::invalid_argument("port");
+			if(port > get_port_count()) throw std::out_of_range("port");
+			lock _(get_lock());
+			return port_info[port - 1].stat;
+		}
+
+		void local_hcd::port_connect(uint8_t port, usb::data_rate rate) volatile throw(std::exception)
+		{
+			if(!port) throw std::invalid_argument("port");
+			if(port > get_port_count()) throw std::out_of_range("port");
+			bool lowspeed = rate == data_rate_low;
+			bool highspeed = rate == data_rate_high;
+			usb_vhci_port_stat ps;
+			ps.status = USB_VHCI_PORT_STAT_CONNECTION;
+			ps.status |= lowspeed ? USB_VHCI_PORT_STAT_LOW_SPEED : 0;
+			ps.status |= highspeed ? USB_VHCI_PORT_STAT_HIGH_SPEED : 0;
+			ps.change = USB_VHCI_PORT_STAT_C_CONNECTION;
+			ps.index = port;
+			ps.flags = 0;
+			usb_vhci_update_port_stat(fd, ps);
+		}
+
+		void local_hcd::port_disconnect(uint8_t port) volatile throw(std::exception)
+		{
+			if(!port) throw std::invalid_argument("port");
+			if(port > get_port_count()) throw std::out_of_range("port");
+			usb_vhci_port_stat ps;
+			ps.status = 0;
+			ps.change = USB_VHCI_PORT_STAT_C_CONNECTION;
+			ps.index = port;
+			ps.flags = 0;
+			usb_vhci_update_port_stat(fd, ps);
+		}
+
+		void local_hcd::port_disable(uint8_t port) volatile throw(std::exception)
+		{
+			if(!port) throw std::invalid_argument("port");
+			if(port > get_port_count()) throw std::out_of_range("port");
+			usb_vhci_port_stat ps;
+			ps.status = 0;
+			ps.change = USB_VHCI_PORT_STAT_C_ENABLE;
+			ps.index = port;
+			ps.flags = 0;
+			usb_vhci_update_port_stat(fd, ps);
+		}
+
+		void local_hcd::port_resumed(uint8_t port) volatile throw(std::exception)
+		{
+			if(!port) throw std::invalid_argument("port");
+			if(port > get_port_count()) throw std::out_of_range("port");
+			usb_vhci_port_stat ps;
+			ps.status = 0;
+			ps.change = USB_VHCI_PORT_STAT_C_SUSPEND;
+			ps.index = port;
+			ps.flags = 0;
+			usb_vhci_update_port_stat(fd, ps);
+		}
+
+		void local_hcd::port_overcurrent(uint8_t port, bool set) volatile throw(std::exception)
+		{
+			if(!port) throw std::invalid_argument("port");
+			if(port > get_port_count()) throw std::out_of_range("port");
+			usb_vhci_port_stat ps;
+			ps.status = set ? USB_VHCI_PORT_STAT_OVERCURRENT : 0;
+			ps.change = USB_VHCI_PORT_STAT_C_OVERCURRENT;
+			ps.index = port;
+			ps.flags = 0;
+			usb_vhci_update_port_stat(fd, ps);
+		}
+
+		void local_hcd::port_reset_done(uint8_t port, bool enable) volatile throw(std::exception)
+		{
+			if(!port) throw std::invalid_argument("port");
+			if(port > get_port_count()) throw std::out_of_range("port");
+			usb_vhci_port_stat ps;
+			ps.status = enable ? USB_VHCI_PORT_STAT_ENABLE : 0;
+			ps.change = USB_VHCI_PORT_STAT_C_RESET;
+			ps.change |= enable ? USB_VHCI_PORT_STAT_C_ENABLE : 0;
+			ps.index = port;
+			ps.flags = 0;
+			usb_vhci_update_port_stat(fd, ps);
 		}
 	}
 }

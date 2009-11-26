@@ -34,7 +34,7 @@
 int usb_vhci_open(uint8_t port_count,  // [IN]  number of ports
                   int32_t *id,         // [OUT] controller id
                   int32_t *usb_busnum, // [OUT] usb bus number
-                  char    *bus_id)     // [OUT] bus id (usually
+                  char    **bus_id)    // [OUT] bus id (usually
                                        //       vhci_hcd.<controller id>)
 {
 	int fd = open(USB_VHCI_DEVICE_FILE, O_RDWR);
@@ -54,9 +54,11 @@ int usb_vhci_open(uint8_t port_count,  // [IN]  number of ports
 	if(usb_busnum) *usb_busnum = r.usb_busnum;
 	if(bus_id)
 	{
-		size_t s = sizeof r.bus_id - sizeof *r.bus_id;
-		memcpy(bus_id, r.bus_id, s);
-		bus_id[s] = 0;
+		size_t s = sizeof r.bus_id / sizeof *r.bus_id - 1;
+		r.bus_id[s] = 0;
+		size_t ss = (strlen(r.bus_id) + 1) * sizeof **bus_id;
+		if((*bus_id = malloc(ss)))
+			memcpy(*bus_id, r.bus_id, ss);
 	}
 
 	return fd;
