@@ -12,9 +12,17 @@ local_hcd.cpp
 INCLUDES = $(all_includes)
 
 # the library search path.
-libusb_vhci_la_LDFLAGS = $(all_libraries)
+libusb_vhci_la_LDFLAGS = $(all_libraries) -lpthread
 
 include_HEADERS = libusb_vhci.h
 
-AM_CFLAGS = -pthread -std=c99 -Wall
-AM_CXXFLAGS = -pthread -fno-enforce-eh-specs -Wall -Weffc++ -Wold-style-cast -Woverloaded-virtual -Wsign-promo -Wstrict-null-sentinel
+libusb_vhci_la_CFLAGS_common = -pthread -Wall
+libusb_vhci_la_CXXFLAGS_common = -pthread -Wall -Weffc++ -Wold-style-cast -Woverloaded-virtual -Wsign-promo -Wstrict-null-sentinel
+if ENABLE_DEBUG
+libusb_vhci_la_CFLAGS = $(libusb_vhci_la_CFLAGS_common)
+libusb_vhci_la_CXXFLAGS = $(libusb_vhci_la_CXXFLAGS_common)
+endif
+if ENABLE_RELEASE
+libusb_vhci_la_CFLAGS = $(libusb_vhci_la_CFLAGS_common)
+libusb_vhci_la_CXXFLAGS = $(libusb_vhci_la_CXXFLAGS_common) -fno-enforce-eh-specs
+endif

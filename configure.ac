@@ -13,17 +13,45 @@ AM_MAINTAINER_MODE
 LT_PREREQ([2.2.6])
 LT_INIT
 
+MY_CHECK_WS
+
+MY_ARG_ENABLE(
+    debug,
+    no,
+    [Compile with debugging flags.]
+)
+
+AM_CONDITIONAL(ENABLE_DEBUG, [test "x$enable_debug" != "xno"])
+AM_CONDITIONAL(ENABLE_RELEASE, [test "x$enable_debug" = "xno"])
+
+if test "x$enable_debug" != "xno"; then
+	CFLAGS="$CFLAGS -g3 -O0"
+	CXXFLAGS="$CXXFLAGS -g3 -O0"
+else
+	CFLAGS="$CFLAGS -O2"
+	CXXFLAGS="$CXXFLAGS -O2"
+fi
+
 # Checks for programs.
 AC_LANG_C
 AC_PROG_CC
+AC_PROG_CC_STDC
 AC_PROG_CXX
 AC_PROG_LIBTOOL
 AC_PROG_INSTALL
 
 # Checks for libraries.
+AC_CHECK_LIB([pthread], [pthread_self], [],
+	[AC_MSG_ERROR([pthread library is missing])]
+)
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdlib.h])
+AC_CHECK_HEADERS([pthread.h stdlib.h stdio.h string.h errno.h fcntl.h unistd.h sys/ioctl.h], [],
+	[AC_MSG_ERROR([missing header files])]
+)
+AC_CHECK_HEADERS([linux/ioctl.h], [],
+	[AC_MSG_ERROR([missing linux kernel header files])]
+)
 
 # Checks for typedefs, structures, and compiler characteristics.
 

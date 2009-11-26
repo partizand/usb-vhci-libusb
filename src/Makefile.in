@@ -37,7 +37,8 @@ subdir = src
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/expansions.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -53,12 +54,15 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(includedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libusb_vhci_la_LIBADD =
-am_libusb_vhci_la_OBJECTS = libusb_vhci.lo urb.lo port_stat.lo work.lo \
-	hcd.lo local_hcd.lo
+am_libusb_vhci_la_OBJECTS = libusb_vhci_la-libusb_vhci.lo \
+	libusb_vhci_la-urb.lo libusb_vhci_la-port_stat.lo \
+	libusb_vhci_la-work.lo libusb_vhci_la-hcd.lo \
+	libusb_vhci_la-local_hcd.lo
 libusb_vhci_la_OBJECTS = $(am_libusb_vhci_la_OBJECTS)
 libusb_vhci_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
-	$(CXXFLAGS) $(libusb_vhci_la_LDFLAGS) $(LDFLAGS) -o $@
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) \
+	$(libusb_vhci_la_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -218,10 +222,14 @@ local_hcd.cpp
 INCLUDES = $(all_includes)
 
 # the library search path.
-libusb_vhci_la_LDFLAGS = $(all_libraries)
+libusb_vhci_la_LDFLAGS = $(all_libraries) -lpthread
 include_HEADERS = libusb_vhci.h
-AM_CFLAGS = -pthread -std=c99 -Wall
-AM_CXXFLAGS = -pthread -fno-enforce-eh-specs -Wall -Weffc++ -Wold-style-cast -Woverloaded-virtual -Wsign-promo -Wstrict-null-sentinel
+libusb_vhci_la_CFLAGS_common = -pthread -Wall
+libusb_vhci_la_CXXFLAGS_common = -pthread -Wall -Weffc++ -Wold-style-cast -Woverloaded-virtual -Wsign-promo -Wstrict-null-sentinel
+@ENABLE_DEBUG_TRUE@libusb_vhci_la_CFLAGS = $(libusb_vhci_la_CFLAGS_common)
+@ENABLE_RELEASE_TRUE@libusb_vhci_la_CFLAGS = $(libusb_vhci_la_CFLAGS_common)
+@ENABLE_DEBUG_TRUE@libusb_vhci_la_CXXFLAGS = $(libusb_vhci_la_CXXFLAGS_common)
+@ENABLE_RELEASE_TRUE@libusb_vhci_la_CXXFLAGS = $(libusb_vhci_la_CXXFLAGS_common) -fno-enforce-eh-specs
 all: all-am
 
 .SUFFIXES:
@@ -291,12 +299,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hcd.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/local_hcd.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/port_stat.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/urb.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/work.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci_la-hcd.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci_la-libusb_vhci.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci_la-local_hcd.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci_la-port_stat.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci_la-urb.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libusb_vhci_la-work.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -319,6 +327,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
+libusb_vhci_la-libusb_vhci.lo: libusb_vhci.c
+@am__fastdepCC_TRUE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CFLAGS) $(CFLAGS) -MT libusb_vhci_la-libusb_vhci.lo -MD -MP -MF $(DEPDIR)/libusb_vhci_la-libusb_vhci.Tpo -c -o libusb_vhci_la-libusb_vhci.lo `test -f 'libusb_vhci.c' || echo '$(srcdir)/'`libusb_vhci.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/libusb_vhci_la-libusb_vhci.Tpo $(DEPDIR)/libusb_vhci_la-libusb_vhci.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='libusb_vhci.c' object='libusb_vhci_la-libusb_vhci.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CFLAGS) $(CFLAGS) -c -o libusb_vhci_la-libusb_vhci.lo `test -f 'libusb_vhci.c' || echo '$(srcdir)/'`libusb_vhci.c
+
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
 @am__fastdepCXX_TRUE@	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
@@ -339,6 +354,41 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LTCXXCOMPILE) -c -o $@ $<
+
+libusb_vhci_la-urb.lo: urb.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -MT libusb_vhci_la-urb.lo -MD -MP -MF $(DEPDIR)/libusb_vhci_la-urb.Tpo -c -o libusb_vhci_la-urb.lo `test -f 'urb.cpp' || echo '$(srcdir)/'`urb.cpp
+@am__fastdepCXX_TRUE@	mv -f $(DEPDIR)/libusb_vhci_la-urb.Tpo $(DEPDIR)/libusb_vhci_la-urb.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='urb.cpp' object='libusb_vhci_la-urb.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -c -o libusb_vhci_la-urb.lo `test -f 'urb.cpp' || echo '$(srcdir)/'`urb.cpp
+
+libusb_vhci_la-port_stat.lo: port_stat.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -MT libusb_vhci_la-port_stat.lo -MD -MP -MF $(DEPDIR)/libusb_vhci_la-port_stat.Tpo -c -o libusb_vhci_la-port_stat.lo `test -f 'port_stat.cpp' || echo '$(srcdir)/'`port_stat.cpp
+@am__fastdepCXX_TRUE@	mv -f $(DEPDIR)/libusb_vhci_la-port_stat.Tpo $(DEPDIR)/libusb_vhci_la-port_stat.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='port_stat.cpp' object='libusb_vhci_la-port_stat.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -c -o libusb_vhci_la-port_stat.lo `test -f 'port_stat.cpp' || echo '$(srcdir)/'`port_stat.cpp
+
+libusb_vhci_la-work.lo: work.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -MT libusb_vhci_la-work.lo -MD -MP -MF $(DEPDIR)/libusb_vhci_la-work.Tpo -c -o libusb_vhci_la-work.lo `test -f 'work.cpp' || echo '$(srcdir)/'`work.cpp
+@am__fastdepCXX_TRUE@	mv -f $(DEPDIR)/libusb_vhci_la-work.Tpo $(DEPDIR)/libusb_vhci_la-work.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='work.cpp' object='libusb_vhci_la-work.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -c -o libusb_vhci_la-work.lo `test -f 'work.cpp' || echo '$(srcdir)/'`work.cpp
+
+libusb_vhci_la-hcd.lo: hcd.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -MT libusb_vhci_la-hcd.lo -MD -MP -MF $(DEPDIR)/libusb_vhci_la-hcd.Tpo -c -o libusb_vhci_la-hcd.lo `test -f 'hcd.cpp' || echo '$(srcdir)/'`hcd.cpp
+@am__fastdepCXX_TRUE@	mv -f $(DEPDIR)/libusb_vhci_la-hcd.Tpo $(DEPDIR)/libusb_vhci_la-hcd.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='hcd.cpp' object='libusb_vhci_la-hcd.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -c -o libusb_vhci_la-hcd.lo `test -f 'hcd.cpp' || echo '$(srcdir)/'`hcd.cpp
+
+libusb_vhci_la-local_hcd.lo: local_hcd.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -MT libusb_vhci_la-local_hcd.lo -MD -MP -MF $(DEPDIR)/libusb_vhci_la-local_hcd.Tpo -c -o libusb_vhci_la-local_hcd.lo `test -f 'local_hcd.cpp' || echo '$(srcdir)/'`local_hcd.cpp
+@am__fastdepCXX_TRUE@	mv -f $(DEPDIR)/libusb_vhci_la-local_hcd.Tpo $(DEPDIR)/libusb_vhci_la-local_hcd.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='local_hcd.cpp' object='libusb_vhci_la-local_hcd.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libusb_vhci_la_CXXFLAGS) $(CXXFLAGS) -c -o libusb_vhci_la-local_hcd.lo `test -f 'local_hcd.cpp' || echo '$(srcdir)/'`local_hcd.cpp
 
 mostlyclean-libtool:
 	-rm -f *.lo
