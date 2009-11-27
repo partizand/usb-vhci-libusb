@@ -111,23 +111,21 @@ namespace usb
 		bool hcd::next_work(work** w) volatile throw(std::bad_alloc)
 		{
 			*w = NULL;
+			lock _(_lock);
+			hcd& _this(const_cast<hcd&>(*this));
+			std::deque<work*>::size_type len(_this.inbox.size());
+			while(len)
 			{
-				lock _(_lock);
-				hcd& _this(const_cast<hcd&>(*this));
-				std::deque<work*>::size_type len(_this.inbox.size());
-				while(len)
+				work* _w(_this.inbox.front());
+				_this.inbox.pop_front();
+				if(!_w->is_canceled())
 				{
-					work* _w(_this.inbox.front());
-					_this.inbox.pop_front();
-					if(!_w->is_canceled())
-					{
-						_this.processing.push_back(_w);
-						*w = _w;
-						return len != 1;
-					}
-					delete _w;
-					len = _this.inbox.size();
+					_this.processing.push_back(_w);
+					*w = _w;
+					return len != 1;
 				}
+				delete _w;
+				len = _this.inbox.size();
 			}
 			return false;
 		}
