@@ -60,6 +60,7 @@ AC_CHECK_HEADERS([linux/ioctl.h], [],
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
+examples/Makefile
 
 ])
 
