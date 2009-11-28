@@ -440,8 +440,7 @@ namespace usb
 			virtual void port_disable(uint8_t port) volatile throw(std::exception) = 0;
 			virtual void port_resumed(uint8_t port) volatile throw(std::exception) = 0;
 			virtual void port_overcurrent(uint8_t port, bool set) volatile throw(std::exception) = 0;
-			virtual void port_reset_done(uint8_t port, bool enable) volatile throw(std::exception) = 0;
-			void port_reset_done(uint8_t port) volatile throw(std::exception) { port_reset_done(port, true); }
+			virtual void port_reset_done(uint8_t port, bool enable = true) volatile throw(std::exception) = 0;
 			uint8_t get_port_count() const volatile throw() { return port_count; }
 			bool next_work(work** w) volatile throw(std::bad_alloc);
 			void finish_work(work* w) volatile throw(std::exception);
@@ -487,7 +486,7 @@ namespace usb
 			virtual void port_disable(uint8_t port) volatile throw(std::exception);
 			virtual void port_resumed(uint8_t port) volatile throw(std::exception);
 			virtual void port_overcurrent(uint8_t port, bool set) volatile throw(std::exception);
-			virtual void port_reset_done(uint8_t port, bool enable) volatile throw(std::exception);
+			virtual void port_reset_done(uint8_t port, bool enable = true) volatile throw(std::exception);
 		};
 	}
 }

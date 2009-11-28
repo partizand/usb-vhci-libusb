@@ -6,8 +6,8 @@ Makefile
 /libtool
 /stamp-*
 /libusb_vhci-*.*
-/src/.deps
-/src/.libs
+.deps
+.libs
 *.la
 *.lo
 *.o
@@ -16,3 +16,4 @@ Makefile
 /Doxyfile
 *~
 *.swp
+/examples/virtual_device
