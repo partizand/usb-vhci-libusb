@@ -103,7 +103,7 @@ namespace usb
 			retry_ps:
 				if(nomem_retry)
 				{
-					sleep(100);
+					usleep(100000);
 					if(is_thread_shutdown())
 					{
 						delete psw;
@@ -153,7 +153,7 @@ namespace usb
 			retry_pu:
 				if(nomem_retry)
 				{
-					sleep(100);
+					usleep(100000);
 					if(is_thread_shutdown())
 					{
 						delete puw; // dtor of puw deletes the urb and the data buffers, too
@@ -172,7 +172,7 @@ namespace usb
 						if(!w.work.urb.buffer)
 						{
 							// wait for others to free mem
-							sleep(100);
+							usleep(100000);
 							if(is_thread_shutdown()) return;
 						}
 					} while(!w.work.urb.buffer);
@@ -185,7 +185,7 @@ namespace usb
 						if(!w.work.urb.iso_packets)
 						{
 							// wait for others to free mem
-							sleep(100);
+							usleep(100000);
 							if(is_thread_shutdown()) return;
 						}
 					} while(!w.work.urb.iso_packets);
@@ -196,7 +196,7 @@ namespace usb
 					if(!(u = new(std::nothrow) usb::urb(w.work.urb, true)))
 					{
 						// wait for others to free mem
-						sleep(100);
+						usleep(100000);
 						if(is_thread_shutdown()) return;
 					}
 				}
@@ -273,7 +273,7 @@ namespace usb
 					if(!(cuw = new(std::nothrow) cancel_urb_work(0, w.work.handle)))
 					{
 						// wait for others to free mem
-						sleep(100);
+						usleep(100000);
 						if(is_thread_shutdown()) return;
 					}
 				}
@@ -285,7 +285,7 @@ namespace usb
 				catch(std::bad_alloc)
 				{
 					// wait for others to free mem
-					sleep(100);
+					usleep(100000);
 					if(is_thread_shutdown())
 					{
 						delete cuw;
