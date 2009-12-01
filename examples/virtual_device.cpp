@@ -1,17 +1,50 @@
+#include <pthread.h>
 #include <unistd.h>
 #include <iostream>
 #include <iomanip>
 #include "../src/libusb_vhci.h"
 
+bool has_work(true), waiting_for_work(false);
+pthread_mutex_t has_work_mutex;
+pthread_cond_t has_work_cv;
+
+void signal_work_enqueued(void* arg, usb::vhci::hcd& from) throw()
+{
+	pthread_mutex_lock(&has_work_mutex);
+	has_work = true;
+	if(waiting_for_work)
+	{
+		waiting_for_work = false;
+		pthread_cond_signal(&has_work_cv);
+	}
+	pthread_mutex_unlock(&has_work_mutex);
+}
+
 int main()
 {
+	pthread_mutex_init(&has_work_mutex, NULL);
+	pthread_cond_init(&has_work_cv, NULL);
+
 	usb::vhci::local_hcd hcd(1);
 	std::cout << "created " << hcd.get_bus_id() << " (bus# " << hcd.get_usb_bus_num() << ")" << std::endl;
+	hcd.add_work_enqueued_callback(usb::vhci::hcd::callback(&signal_work_enqueued, NULL));
 
+	bool cont(false);
 	while(true)
 	{
+		if(!cont)
+		{
+			pthread_mutex_lock(&has_work_mutex);
+			if(!has_work)
+			{
+				waiting_for_work = true;
+				pthread_cond_wait(&has_work_cv, &has_work_mutex);
+			}
+			else has_work = false;
+			pthread_mutex_unlock(&has_work_mutex);
+		}
 		usb::vhci::work* work;
-		hcd.next_work(&work);
+		cont = hcd.next_work(&work);
 		if(work)
 		{
 			if(usb::vhci::port_stat_work* psw = dynamic_cast<usb::vhci::port_stat_work*>(work))
@@ -63,7 +96,7 @@ int main()
 			else if(usb::vhci::process_urb_work* puw = dynamic_cast<usb::vhci::process_urb_work*>(work))
 			{
 				std::cout << "got process urb work" << std::endl;
-				
+
 			}
 			else if(usb::vhci::cancel_urb_work* cuw = dynamic_cast<usb::vhci::cancel_urb_work*>(work))
 			{
@@ -76,9 +109,10 @@ int main()
 			}
 			hcd.finish_work(work);
 		}
-		else usleep(5000);
 	}
 
+	pthread_mutex_destroy(&has_work_mutex);
+	pthread_cond_destroy(&has_work_cv);
 	return 0;
 }
 
