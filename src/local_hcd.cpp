@@ -356,7 +356,8 @@ namespace usb
 			ps.change = USB_VHCI_PORT_STAT_C_CONNECTION;
 			ps.index = port;
 			ps.flags = 0;
-			usb_vhci_update_port_stat(fd, ps);
+			if(usb_vhci_update_port_stat(fd, ps) == -1)
+				throw std::exception();
 		}
 
 		void local_hcd::port_disconnect(uint8_t port) volatile throw(std::exception)
@@ -368,7 +369,8 @@ namespace usb
 			ps.change = USB_VHCI_PORT_STAT_C_CONNECTION;
 			ps.index = port;
 			ps.flags = 0;
-			usb_vhci_update_port_stat(fd, ps);
+			if(usb_vhci_update_port_stat(fd, ps) == -1)
+				throw std::exception();
 		}
 
 		void local_hcd::port_disable(uint8_t port) volatile throw(std::exception)
@@ -380,7 +382,8 @@ namespace usb
 			ps.change = USB_VHCI_PORT_STAT_C_ENABLE;
 			ps.index = port;
 			ps.flags = 0;
-			usb_vhci_update_port_stat(fd, ps);
+			if(usb_vhci_update_port_stat(fd, ps) == -1)
+				throw std::exception();
 		}
 
 		void local_hcd::port_resumed(uint8_t port) volatile throw(std::exception)
@@ -392,7 +395,8 @@ namespace usb
 			ps.change = USB_VHCI_PORT_STAT_C_SUSPEND;
 			ps.index = port;
 			ps.flags = 0;
-			usb_vhci_update_port_stat(fd, ps);
+			if(usb_vhci_update_port_stat(fd, ps) == -1)
+				throw std::exception();
 		}
 
 		void local_hcd::port_overcurrent(uint8_t port, bool set) volatile throw(std::exception)
@@ -404,7 +408,8 @@ namespace usb
 			ps.change = USB_VHCI_PORT_STAT_C_OVERCURRENT;
 			ps.index = port;
 			ps.flags = 0;
-			usb_vhci_update_port_stat(fd, ps);
+			if(usb_vhci_update_port_stat(fd, ps) == -1)
+				throw std::exception();
 		}
 
 		void local_hcd::port_reset_done(uint8_t port, bool enable) volatile throw(std::exception)
@@ -414,10 +419,11 @@ namespace usb
 			usb_vhci_port_stat ps;
 			ps.status = enable ? USB_VHCI_PORT_STAT_ENABLE : 0;
 			ps.change = USB_VHCI_PORT_STAT_C_RESET;
-			ps.change |= enable ? USB_VHCI_PORT_STAT_C_ENABLE : 0;
+			ps.change |= enable ? 0 : USB_VHCI_PORT_STAT_C_ENABLE;
 			ps.index = port;
 			ps.flags = 0;
-			usb_vhci_update_port_stat(fd, ps);
+			if(usb_vhci_update_port_stat(fd, ps) == -1)
+				throw std::exception();
 		}
 	}
 }
