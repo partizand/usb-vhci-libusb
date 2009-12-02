@@ -207,13 +207,111 @@ int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
 	return 0;
 }
 
-int usb_vhci_update_port_stat(int fd, struct usb_vhci_port_stat stat)
+int usb_vhci_port_connect(int fd, uint8_t port, uint8_t data_rate)
 {
+	if(!port ||
+	   (data_rate != USB_VHCI_DATA_RATE_FULL &&
+	    data_rate != USB_VHCI_DATA_RATE_LOW &&
+	    data_rate != USB_VHCI_DATA_RATE_HIGH))
+	{
+		errno = EINVAL;
+		return -1;
+	}
 	struct vhci_ioc_port_stat ps;
-	ps.status = stat.status;
-	ps.change = stat.change;
-	ps.index  = stat.index;
-	ps.flags  = stat.flags;
+	ps.status = USB_PORT_STAT_CONNECTION;
+	if(data_rate == USB_VHCI_DATA_RATE_LOW)
+		ps.status |= USB_PORT_STAT_LOW_SPEED;
+	if(data_rate == USB_VHCI_DATA_RATE_HIGH)
+		ps.status |= USB_PORT_STAT_HIGH_SPEED;
+	ps.change = USB_PORT_STAT_C_CONNECTION;
+	ps.index = port;
+	ps.flags = 0;
+	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+		return -1;
+	return 0;
+}
+
+int usb_vhci_port_disconnect(int fd, uint8_t port)
+{
+	if(!port)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+	struct vhci_ioc_port_stat ps;
+	ps.status = 0;
+	ps.change = USB_PORT_STAT_C_CONNECTION;
+	ps.index = port;
+	ps.flags = 0;
+	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+		return -1;
+	return 0;
+}
+
+int usb_vhci_port_disable(int fd, uint8_t port)
+{
+	if(!port)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+	struct vhci_ioc_port_stat ps;
+	ps.status = 0;
+	ps.change = USB_PORT_STAT_C_ENABLE;
+	ps.index = port;
+	ps.flags = 0;
+	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+		return -1;
+	return 0;
+}
+
+int usb_vhci_port_resumed(int fd, uint8_t port)
+{
+	if(!port)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+	struct vhci_ioc_port_stat ps;
+	ps.status = 0;
+	ps.change = USB_PORT_STAT_C_SUSPEND;
+	ps.index = port;
+	ps.flags = 0;
+	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+		return -1;
+	return 0;
+}
+
+int usb_vhci_port_overcurrent(int fd, uint8_t port, uint8_t set)
+{
+	if(!port)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+	struct vhci_ioc_port_stat ps;
+	ps.status = set ? USB_PORT_STAT_OVERCURRENT : 0;
+	ps.change = USB_PORT_STAT_C_OVERCURRENT;
+	ps.index = port;
+	ps.flags = 0;
+	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+		return -1;
+	return 0;
+}
+
+int usb_vhci_port_reset_done(int fd, uint8_t port, uint8_t enable)
+{
+	if(!port)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+	struct vhci_ioc_port_stat ps;
+	ps.status = enable ? USB_PORT_STAT_ENABLE : 0;;
+	ps.change = USB_PORT_STAT_C_RESET;
+	ps.change |= enable ? 0 : USB_PORT_STAT_C_ENABLE;
+	ps.index = port;
+	ps.flags = 0;
 	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
 		return -1;
 	return 0;

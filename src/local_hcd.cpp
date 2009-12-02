@@ -347,16 +347,7 @@ namespace usb
 		{
 			if(!port) throw std::invalid_argument("port");
 			if(port > get_port_count()) throw std::out_of_range("port");
-			bool lowspeed = rate == data_rate_low;
-			bool highspeed = rate == data_rate_high;
-			usb_vhci_port_stat ps;
-			ps.status = USB_VHCI_PORT_STAT_CONNECTION;
-			ps.status |= lowspeed ? USB_VHCI_PORT_STAT_LOW_SPEED : 0;
-			ps.status |= highspeed ? USB_VHCI_PORT_STAT_HIGH_SPEED : 0;
-			ps.change = USB_VHCI_PORT_STAT_C_CONNECTION;
-			ps.index = port;
-			ps.flags = 0;
-			if(usb_vhci_update_port_stat(fd, ps) == -1)
+			if(usb_vhci_port_connect(fd, port, rate) == -1)
 				throw std::exception();
 		}
 
@@ -364,12 +355,7 @@ namespace usb
 		{
 			if(!port) throw std::invalid_argument("port");
 			if(port > get_port_count()) throw std::out_of_range("port");
-			usb_vhci_port_stat ps;
-			ps.status = 0;
-			ps.change = USB_VHCI_PORT_STAT_C_CONNECTION;
-			ps.index = port;
-			ps.flags = 0;
-			if(usb_vhci_update_port_stat(fd, ps) == -1)
+			if(usb_vhci_port_disconnect(fd, port) == -1)
 				throw std::exception();
 		}
 
@@ -377,12 +363,7 @@ namespace usb
 		{
 			if(!port) throw std::invalid_argument("port");
 			if(port > get_port_count()) throw std::out_of_range("port");
-			usb_vhci_port_stat ps;
-			ps.status = 0;
-			ps.change = USB_VHCI_PORT_STAT_C_ENABLE;
-			ps.index = port;
-			ps.flags = 0;
-			if(usb_vhci_update_port_stat(fd, ps) == -1)
+			if(usb_vhci_port_disable(fd, port) == -1)
 				throw std::exception();
 		}
 
@@ -390,12 +371,7 @@ namespace usb
 		{
 			if(!port) throw std::invalid_argument("port");
 			if(port > get_port_count()) throw std::out_of_range("port");
-			usb_vhci_port_stat ps;
-			ps.status = 0;
-			ps.change = USB_VHCI_PORT_STAT_C_SUSPEND;
-			ps.index = port;
-			ps.flags = 0;
-			if(usb_vhci_update_port_stat(fd, ps) == -1)
+			if(usb_vhci_port_resumed(fd, port) == -1)
 				throw std::exception();
 		}
 
@@ -403,12 +379,7 @@ namespace usb
 		{
 			if(!port) throw std::invalid_argument("port");
 			if(port > get_port_count()) throw std::out_of_range("port");
-			usb_vhci_port_stat ps;
-			ps.status = set ? USB_VHCI_PORT_STAT_OVERCURRENT : 0;
-			ps.change = USB_VHCI_PORT_STAT_C_OVERCURRENT;
-			ps.index = port;
-			ps.flags = 0;
-			if(usb_vhci_update_port_stat(fd, ps) == -1)
+			if(usb_vhci_port_overcurrent(fd, port, set) == -1)
 				throw std::exception();
 		}
 
@@ -416,13 +387,7 @@ namespace usb
 		{
 			if(!port) throw std::invalid_argument("port");
 			if(port > get_port_count()) throw std::out_of_range("port");
-			usb_vhci_port_stat ps;
-			ps.status = enable ? USB_VHCI_PORT_STAT_ENABLE : 0;
-			ps.change = USB_VHCI_PORT_STAT_C_RESET;
-			ps.change |= enable ? 0 : USB_VHCI_PORT_STAT_C_ENABLE;
-			ps.index = port;
-			ps.flags = 0;
-			if(usb_vhci_update_port_stat(fd, ps) == -1)
+			if(usb_vhci_port_reset_done(fd, port, enable) == -1)
 				throw std::exception();
 		}
 	}

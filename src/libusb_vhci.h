@@ -92,6 +92,9 @@ struct usb_vhci_port_stat
 	uint8_t index, flags;
 #define USB_VHCI_PORT_STAT_FLAG_RESUMING 0x01
 };
+#define USB_VHCI_DATA_RATE_FULL 0
+#define USB_VHCI_DATA_RATE_LOW  1
+#define USB_VHCI_DATA_RATE_HIGH 2
 
 struct usb_vhci_work
 {
@@ -116,7 +119,12 @@ int usb_vhci_close(int fd) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb) _LIB_USB_VHCI_NOTHROW;
-int usb_vhci_update_port_stat(int fd, struct usb_vhci_port_stat stat) _LIB_USB_VHCI_NOTHROW;
+int usb_vhci_port_connect(int fd, uint8_t port, uint8_t data_rate) _LIB_USB_VHCI_NOTHROW;
+int usb_vhci_port_disconnect(int fd, uint8_t port) _LIB_USB_VHCI_NOTHROW;
+int usb_vhci_port_disable(int fd, uint8_t port) _LIB_USB_VHCI_NOTHROW;
+int usb_vhci_port_resumed(int fd, uint8_t port) _LIB_USB_VHCI_NOTHROW;
+int usb_vhci_port_overcurrent(int fd, uint8_t port, uint8_t set) _LIB_USB_VHCI_NOTHROW;
+int usb_vhci_port_reset_done(int fd, uint8_t port, uint8_t enable) _LIB_USB_VHCI_NOTHROW;
 
 #ifdef __cplusplus
 } // extern "C"
@@ -142,9 +150,9 @@ namespace usb
 
 	enum data_rate
 	{
-		data_rate_full = 0,
-		data_rate_low  = 1,
-		data_rate_high = 2
+		data_rate_full = USB_VHCI_DATA_RATE_FULL,
+		data_rate_low  = USB_VHCI_DATA_RATE_LOW,
+		data_rate_high = USB_VHCI_DATA_RATE_HIGH
 	};
 
 	class urb
