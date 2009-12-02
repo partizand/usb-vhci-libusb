@@ -7,7 +7,7 @@ AC_CONFIG_SRCDIR([src/libusb_vhci.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([gnu])
+AM_INIT_AUTOMAKE([gnu dist-bzip2 tar-ustar])
 AM_MAINTAINER_MODE
 
 LT_PREREQ([2.2.6])
