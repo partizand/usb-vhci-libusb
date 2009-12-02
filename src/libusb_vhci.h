@@ -155,6 +155,17 @@ namespace usb
 		data_rate_high = USB_VHCI_DATA_RATE_HIGH
 	};
 
+#define URB_RQ_GET_STATUS         0
+#define URB_RQ_CLEAR_FEATURE      1
+#define URB_RQ_SET_FEATURE        3
+#define URB_RQ_SET_ADDRESS        5
+#define URB_RQ_GET_DESCRIPTOR     6
+#define URB_RQ_SET_DESCRIPTOR     7
+#define URB_RQ_GET_CONFIGURATION  8
+#define URB_RQ_SET_CONFIGURATION  9
+#define URB_RQ_GET_INTERFACE     10
+#define URB_RQ_SET_INTERFACE     11
+#define URB_RQ_SYNCH_FRAME       12
 	class urb
 	{
 	private:
