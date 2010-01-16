@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Michael Singer <michael@a-singer.de>
+ * Copyright (C) 2009-2010 Michael Singer <michael@a-singer.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -137,6 +137,18 @@ int usb_vhci_port_reset_done(int fd, uint8_t port, uint8_t enable) _LIB_USB_VHCI
 #define usb_vhci_is_control(type) ((type) == USB_VHCI_URB_TYPE_CONTROL)
 #define usb_vhci_is_bulk(type)    ((type) == USB_VHCI_URB_TYPE_BULK)
 
+#define URB_RQ_GET_STATUS         0
+#define URB_RQ_CLEAR_FEATURE      1
+#define URB_RQ_SET_FEATURE        3
+#define URB_RQ_SET_ADDRESS        5
+#define URB_RQ_GET_DESCRIPTOR     6
+#define URB_RQ_SET_DESCRIPTOR     7
+#define URB_RQ_GET_CONFIGURATION  8
+#define URB_RQ_SET_CONFIGURATION  9
+#define URB_RQ_GET_INTERFACE     10
+#define URB_RQ_SET_INTERFACE     11
+#define URB_RQ_SYNCH_FRAME       12
+
 #ifdef __cplusplus
 namespace usb
 {
@@ -155,17 +167,6 @@ namespace usb
 		data_rate_high = USB_VHCI_DATA_RATE_HIGH
 	};
 
-#define URB_RQ_GET_STATUS         0
-#define URB_RQ_CLEAR_FEATURE      1
-#define URB_RQ_SET_FEATURE        3
-#define URB_RQ_SET_ADDRESS        5
-#define URB_RQ_GET_DESCRIPTOR     6
-#define URB_RQ_SET_DESCRIPTOR     7
-#define URB_RQ_GET_CONFIGURATION  8
-#define URB_RQ_SET_CONFIGURATION  9
-#define URB_RQ_GET_INTERFACE     10
-#define URB_RQ_SET_INTERFACE     11
-#define URB_RQ_SYNCH_FRAME       12
 	class urb
 	{
 	private:
