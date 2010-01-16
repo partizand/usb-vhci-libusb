@@ -32,7 +32,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-noinst_PROGRAMS = virtual_device$(EXEEXT)
+noinst_PROGRAMS = virtual_device$(EXEEXT) virtual_device2$(EXEEXT)
 subdir = examples
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -50,9 +50,24 @@ virtual_device_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(virtual_device_CXXFLAGS) $(CXXFLAGS) \
 	$(virtual_device_LDFLAGS) $(LDFLAGS) -o $@
+am_virtual_device2_OBJECTS =  \
+	virtual_device2-virtual_device2.$(OBJEXT)
+virtual_device2_OBJECTS = $(am_virtual_device2_OBJECTS)
+virtual_device2_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(virtual_device2_CFLAGS) \
+	$(CFLAGS) $(virtual_device2_LDFLAGS) $(LDFLAGS) -o $@
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+CCLD = $(CC)
+LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 LTCXXCOMPILE = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
@@ -62,8 +77,8 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(virtual_device_SOURCES)
-DIST_SOURCES = $(virtual_device_SOURCES)
+SOURCES = $(virtual_device_SOURCES) $(virtual_device2_SOURCES)
+DIST_SOURCES = $(virtual_device_SOURCES) $(virtual_device2_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -186,20 +201,26 @@ top_srcdir = @top_srcdir@
 virtual_device_SOURCES = virtual_device.cpp
 virtual_device_LDADD = ../src/libusb_vhci.la
 virtual_device_DEPENDENCIES = ../src/libusb_vhci.la
+virtual_device2_SOURCES = virtual_device2.c
+virtual_device2_LDADD = ../src/libusb_vhci.la
+virtual_device2_DEPENDENCIES = ../src/libusb_vhci.la
 
 # set the include path found by configure
 INCLUDES = $(all_includes)
 
 # the library search path.
 virtual_device_LDFLAGS = $(all_libraries)
+virtual_device2_LDFLAGS = $(all_libraries)
 CFLAGS_common = -pthread -Wall
 CXXFLAGS_common = -pthread -Wall -Weffc++ -Wold-style-cast -Woverloaded-virtual -Wsign-promo -Wstrict-null-sentinel
 virtual_device_CFLAGS = $(CFLAGS_common)
 virtual_device_CXXFLAGS = $(CXXFLAGS_common)
+virtual_device2_CFLAGS = $(CFLAGS_common)
+virtual_device2_CXXFLAGS = $(CXXFLAGS_common)
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .cpp .lo .o .obj
+.SUFFIXES: .c .cpp .lo .o .obj
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -239,6 +260,9 @@ clean-noinstPROGRAMS:
 virtual_device$(EXEEXT): $(virtual_device_OBJECTS) $(virtual_device_DEPENDENCIES) 
 	@rm -f virtual_device$(EXEEXT)
 	$(virtual_device_LINK) $(virtual_device_OBJECTS) $(virtual_device_LDADD) $(LIBS)
+virtual_device2$(EXEEXT): $(virtual_device2_OBJECTS) $(virtual_device2_DEPENDENCIES) 
+	@rm -f virtual_device2$(EXEEXT)
+	$(virtual_device2_LINK) $(virtual_device2_OBJECTS) $(virtual_device2_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -247,6 +271,42 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/virtual_device-virtual_device.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/virtual_device2-virtual_device2.Po@am__quote@
+
+.c.o:
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(COMPILE) -c $<
+
+.c.obj:
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
+
+.c.lo:
+@am__fastdepCC_TRUE@	$(LTCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+virtual_device2-virtual_device2.o: virtual_device2.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(virtual_device2_CFLAGS) $(CFLAGS) -MT virtual_device2-virtual_device2.o -MD -MP -MF $(DEPDIR)/virtual_device2-virtual_device2.Tpo -c -o virtual_device2-virtual_device2.o `test -f 'virtual_device2.c' || echo '$(srcdir)/'`virtual_device2.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/virtual_device2-virtual_device2.Tpo $(DEPDIR)/virtual_device2-virtual_device2.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='virtual_device2.c' object='virtual_device2-virtual_device2.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(virtual_device2_CFLAGS) $(CFLAGS) -c -o virtual_device2-virtual_device2.o `test -f 'virtual_device2.c' || echo '$(srcdir)/'`virtual_device2.c
+
+virtual_device2-virtual_device2.obj: virtual_device2.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(virtual_device2_CFLAGS) $(CFLAGS) -MT virtual_device2-virtual_device2.obj -MD -MP -MF $(DEPDIR)/virtual_device2-virtual_device2.Tpo -c -o virtual_device2-virtual_device2.obj `if test -f 'virtual_device2.c'; then $(CYGPATH_W) 'virtual_device2.c'; else $(CYGPATH_W) '$(srcdir)/virtual_device2.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/virtual_device2-virtual_device2.Tpo $(DEPDIR)/virtual_device2-virtual_device2.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='virtual_device2.c' object='virtual_device2-virtual_device2.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(virtual_device2_CFLAGS) $(CFLAGS) -c -o virtual_device2-virtual_device2.obj `if test -f 'virtual_device2.c'; then $(CYGPATH_W) 'virtual_device2.c'; else $(CYGPATH_W) '$(srcdir)/virtual_device2.c'; fi`
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
