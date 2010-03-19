@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Michael Singer <michael@a-singer.de>
+ * Copyright (C) 2009-2010 Michael Singer <michael@a-singer.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,7 +73,13 @@ int usb_vhci_close(int fd)
 
 int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work)
 {
+	return usb_vhci_fetch_work_timeout(fd, work, 100);
+}
+
+int usb_vhci_fetch_work_timeout(int fd, struct usb_vhci_work *work, int16_t timeout)
+{
 	struct vhci_ioc_work w;
+	w.timeout = timeout;
 	if(ioctl(fd, VHCI_HCD_IOCFETCHWORK, &w) == -1)
 		return -1;
 

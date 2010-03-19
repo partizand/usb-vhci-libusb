@@ -117,6 +117,7 @@ int usb_vhci_open(uint8_t port_count,
                   char    **bus_id) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_close(int fd) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work) _LIB_USB_VHCI_NOTHROW;
+int usb_vhci_fetch_work_timeout(int fd, struct usb_vhci_work *work, int16_t timeout) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_port_connect(int fd, uint8_t port, uint8_t data_rate) _LIB_USB_VHCI_NOTHROW;

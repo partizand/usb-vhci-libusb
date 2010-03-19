@@ -2,7 +2,7 @@
  * vhci_hcd.h -- VHCI USB host controller driver header.
  *
  * Copyright (C) 2007-2008 Conemis AG Karlsruhe Germany
- * Copyright (C) 2007-2009 Michael Singer <michael@a-singer.de>
+ * Copyright (C) 2007-2010 Michael Singer <michael@a-singer.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ struct vhci_ioc_port_stat
 	__u16 change;    // indicates changed status bits
 	__u8 index;      // index of port
 	__u8 flags;      // additional information from kernel to user space:
-#define VHCI_IOC_PORT_STAT_FLAGS_RESUMING 0 // indicates resuming
+#define VHCI_IOC_PORT_STAT_FLAGS_RESUMING 0x01 // indicates resuming
 	__u8 reserved1, reserved2; // size of the struct should be dividable by four
 };
 
@@ -131,6 +131,8 @@ struct vhci_ioc_work
 	                                      // (it is just a pointer to the urb
 	                                      // in kernel space)
 	union vhci_ioc_work_union work;
+	__s16 timeout;                        // timeout in milliseconds (max. 1000)
+#define VHCI_IOC_TIMEOUT_INFINITE     -1
 	__u8 type;
 #define VHCI_IOC_WORK_TYPE_PORT_STAT   0  // the state of a port has changed
 #define VHCI_IOC_WORK_TYPE_PROCESS_URB 1  // hand an urb to the (virtual)
@@ -201,22 +203,25 @@ struct vhci_ioc_giveback32
 #endif
 #endif
 
-#define VHCI_HCD_IOC_MAGIC      138
-#define VHCI_HCD_IOCREGISTER    _IOWR(VHCI_HCD_IOC_MAGIC, 0, \
-                                      struct vhci_ioc_register)
-#define VHCI_HCD_IOCPORTSTAT    _IOW (VHCI_HCD_IOC_MAGIC, 1, \
-                                      struct vhci_ioc_port_stat)
-#define VHCI_HCD_IOCFETCHWORK   _IOR (VHCI_HCD_IOC_MAGIC, 2, \
-                                      struct vhci_ioc_work)
-#define VHCI_HCD_IOCGIVEBACK    _IOW (VHCI_HCD_IOC_MAGIC, 3, \
-                                      struct vhci_ioc_giveback)
-#define VHCI_HCD_IOCGIVEBACK32  _IOW (VHCI_HCD_IOC_MAGIC, 3, \
-                                      struct vhci_ioc_giveback32)
-#define VHCI_HCD_IOCFETCHDATA   _IOW (VHCI_HCD_IOC_MAGIC, 4, \
-                                      struct vhci_ioc_urb_data)
-#define VHCI_HCD_IOCFETCHDATA32 _IOW (VHCI_HCD_IOC_MAGIC, 4, \
-                                      struct vhci_ioc_urb_data32)
-#define VHCI_HCD_IOC_MAXNR      4
+#define VHCI_HCD_IOC_MAGIC       138
+#define VHCI_HCD_IOCREGISTER     _IOWR(VHCI_HCD_IOC_MAGIC, 0, \
+                                       struct vhci_ioc_register)
+#define VHCI_HCD_IOCPORTSTAT     _IOW (VHCI_HCD_IOC_MAGIC, 1, \
+                                       struct vhci_ioc_port_stat)
+// read-only FETCH_WORK: timeout defaults to 100 ms
+#define VHCI_HCD_IOCFETCHWORK_RO _IOR (VHCI_HCD_IOC_MAGIC, 2, \
+                                       struct vhci_ioc_work)
+#define VHCI_HCD_IOCFETCHWORK    _IOWR(VHCI_HCD_IOC_MAGIC, 2, \
+                                       struct vhci_ioc_work)
+#define VHCI_HCD_IOCGIVEBACK     _IOW (VHCI_HCD_IOC_MAGIC, 3, \
+                                       struct vhci_ioc_giveback)
+#define VHCI_HCD_IOCGIVEBACK32   _IOW (VHCI_HCD_IOC_MAGIC, 3, \
+                                       struct vhci_ioc_giveback32)
+#define VHCI_HCD_IOCFETCHDATA    _IOW (VHCI_HCD_IOC_MAGIC, 4, \
+                                       struct vhci_ioc_urb_data)
+#define VHCI_HCD_IOCFETCHDATA32  _IOW (VHCI_HCD_IOC_MAGIC, 4, \
+                                       struct vhci_ioc_urb_data32)
+#define VHCI_HCD_IOC_MAXNR       4
 
 #endif
 
