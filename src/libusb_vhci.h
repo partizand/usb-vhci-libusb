@@ -32,6 +32,8 @@
 #include <queue>
 #endif
 
+#include <linux/usb-vhci.h>
+
 #define USB_VHCI_DEVICE_FILE "/dev/vhci-ctrl"
 
 #ifdef _LIB_USB_VHCI_NOTHROW
@@ -60,17 +62,10 @@ struct usb_vhci_urb
 	int32_t packet_count, error_count;
 	int32_t status, interval;
 	uint16_t flags;
-#define USB_VHCI_URB_FLAGS_SHORT_NOT_OK 0x0001
-#define USB_VHCI_URB_FLAGS_ISO_ASAP     0x0002
-#define USB_VHCI_URB_FLAGS_ZERO_PACKET  0x0040
 	uint16_t wValue, wIndex, wLength;
 	uint8_t bmRequestType, bRequest;
 	uint8_t devadr, epadr;
 	uint8_t type;
-#define USB_VHCI_URB_TYPE_ISO     0
-#define USB_VHCI_URB_TYPE_INT     1
-#define USB_VHCI_URB_TYPE_CONTROL 2
-#define USB_VHCI_URB_TYPE_BULK    3
 };
 
 struct usb_vhci_port_stat
@@ -90,7 +85,6 @@ struct usb_vhci_port_stat
 #define USB_VHCI_PORT_STAT_C_OVERCURRENT 0x0008
 #define USB_VHCI_PORT_STAT_C_RESET       0x0010
 	uint8_t index, flags;
-#define USB_VHCI_PORT_STAT_FLAG_RESUMING 0x01
 };
 #define USB_VHCI_DATA_RATE_FULL 0
 #define USB_VHCI_DATA_RATE_LOW  1
@@ -106,9 +100,6 @@ struct usb_vhci_work
 	} work;
 
 	int type;
-#define USB_VHCI_WORK_TYPE_PORT_STAT   0
-#define USB_VHCI_WORK_TYPE_PROCESS_URB 1
-#define USB_VHCI_WORK_TYPE_CANCEL_URB  2
 };
 
 int usb_vhci_open(uint8_t port_count,

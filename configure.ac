@@ -53,6 +53,9 @@ AC_CHECK_HEADERS([pthread.h stdlib.h stdio.h string.h errno.h fcntl.h unistd.h s
 AC_CHECK_HEADERS([linux/ioctl.h], [],
 	[AC_MSG_ERROR([missing linux kernel header files])]
 )
+AC_CHECK_HEADERS([linux/usb-vhci.h], [],
+	[AC_MSG_ERROR([missing usb-vhci header files; install header files from usb_vhci_hcd package])]
+)
 
 # Checks for typedefs, structures, and compiler characteristics.
 

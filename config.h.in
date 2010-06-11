@@ -18,6 +18,9 @@
 /* Define to 1 if you have the <linux/ioctl.h> header file. */
 #undef HAVE_LINUX_IOCTL_H
 
+/* Define to 1 if you have the <linux/usb-vhci.h> header file. */
+#undef HAVE_LINUX_USB_VHCI_H
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 

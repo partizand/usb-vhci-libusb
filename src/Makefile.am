@@ -1,7 +1,6 @@
 lib_LTLIBRARIES = libusb_vhci.la
 libusb_vhci_la_SOURCES = \
 libusb_vhci.c \
-vhci-hcd.h \
 urb.cpp \
 port_stat.cpp \
 work.cpp \

@@ -28,7 +28,6 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-#include "vhci-hcd.h"
 #include "libusb_vhci.h"
 
 int usb_vhci_open(uint8_t port_count,  // [IN]  number of ports
@@ -40,9 +39,9 @@ int usb_vhci_open(uint8_t port_count,  // [IN]  number of ports
 	int fd = open(USB_VHCI_DEVICE_FILE, O_RDWR);
 	if(fd == -1) return -1;
 
-	struct vhci_ioc_register r;
+	struct usb_vhci_ioc_register r;
 	r.port_count = port_count;
-	if(ioctl(fd, VHCI_HCD_IOCREGISTER, &r) == -1)
+	if(ioctl(fd, USB_VHCI_HCD_IOCREGISTER, &r) == -1)
 	{
 		int err = errno;
 		usb_vhci_close(fd);
@@ -78,14 +77,14 @@ int usb_vhci_fetch_work(int fd, struct usb_vhci_work *work)
 
 int usb_vhci_fetch_work_timeout(int fd, struct usb_vhci_work *work, int16_t timeout)
 {
-	struct vhci_ioc_work w;
+	struct usb_vhci_ioc_work w;
 	w.timeout = timeout;
-	if(ioctl(fd, VHCI_HCD_IOCFETCHWORK, &w) == -1)
+	if(ioctl(fd, USB_VHCI_HCD_IOCFETCHWORK, &w) == -1)
 		return -1;
 
 	switch(w.type)
 	{
-	case VHCI_IOC_WORK_TYPE_PORT_STAT:
+	case USB_VHCI_WORK_TYPE_PORT_STAT:
 		work->type = USB_VHCI_WORK_TYPE_PORT_STAT;
 		work->work.port_stat.status = w.work.port.status;
 		work->work.port_stat.change = w.work.port.change;
@@ -93,39 +92,33 @@ int usb_vhci_fetch_work_timeout(int fd, struct usb_vhci_work *work, int16_t time
 		work->work.port_stat.flags  = w.work.port.flags;
 		return 0;
 
-	case VHCI_IOC_WORK_TYPE_PROCESS_URB:
+	case USB_VHCI_WORK_TYPE_PROCESS_URB:
 		memset(&work->work.urb, 0, sizeof work->work.urb);
 		switch(w.work.urb.type)
 		{
-		case VHCI_IOC_URB_TYPE_ISO:
-			work->work.urb.type          = USB_VHCI_URB_TYPE_ISO;
+		case USB_VHCI_URB_TYPE_ISO:
 			work->work.urb.packet_count  = w.work.urb.packet_count;
+		case USB_VHCI_URB_TYPE_INT:
 			work->work.urb.interval      = w.work.urb.interval;
 			break;
-		case VHCI_IOC_URB_TYPE_INT:
-			work->work.urb.type          = USB_VHCI_URB_TYPE_INT;
-			work->work.urb.interval      = w.work.urb.interval;
-			break;
-		case VHCI_IOC_URB_TYPE_CONTROL:
-			work->work.urb.type          = USB_VHCI_URB_TYPE_CONTROL;
+		case USB_VHCI_URB_TYPE_CONTROL:
 			work->work.urb.wValue        = w.work.urb.setup_packet.wValue;
 			work->work.urb.wIndex        = w.work.urb.setup_packet.wIndex;
 			work->work.urb.wLength       = w.work.urb.setup_packet.wLength;
 			work->work.urb.bmRequestType = w.work.urb.setup_packet.bmRequestType;
 			work->work.urb.bRequest      = w.work.urb.setup_packet.bRequest;
 			break;
-		case VHCI_IOC_URB_TYPE_BULK:
-			work->work.urb.type          = USB_VHCI_URB_TYPE_BULK;
-			work->work.urb.flags         = ((w.work.urb.flags & VHCI_IOC_URB_FLAGS_SHORT_NOT_OK) ?
-			                                USB_VHCI_URB_FLAGS_SHORT_NOT_OK : 0) |
-			                               ((w.work.urb.flags & VHCI_IOC_URB_FLAGS_ZERO_PACKET) ?
-			                                USB_VHCI_URB_FLAGS_ZERO_PACKET : 0);
+		case USB_VHCI_URB_TYPE_BULK:
+			work->work.urb.flags         = w.work.urb.flags &
+			                               (USB_VHCI_URB_FLAGS_SHORT_NOT_OK |
+			                                USB_VHCI_URB_FLAGS_ZERO_PACKET);
 			break;
 		default:
 			errno = EBADMSG;
 			return -1;
 		}
 		work->type = USB_VHCI_WORK_TYPE_PROCESS_URB;
+		work->work.urb.type          = w.work.urb.type;
 		work->work.urb.status        = -EINPROGRESS;
 		work->work.urb.handle        = w.handle;
 		work->work.urb.buffer_length = w.work.urb.buffer_length;
@@ -136,7 +129,7 @@ int usb_vhci_fetch_work_timeout(int fd, struct usb_vhci_work *work, int16_t time
 		// return 1 if usb_vhci_fetch_data should be called
 		return work->work.urb.buffer_actual || work->work.urb.packet_count;
 
-	case VHCI_IOC_WORK_TYPE_CANCEL_URB:
+	case USB_VHCI_WORK_TYPE_CANCEL_URB:
 		work->type = USB_VHCI_WORK_TYPE_CANCEL_URB;
 		work->work.handle = w.handle;
 		return 0;
@@ -149,7 +142,7 @@ int usb_vhci_fetch_work_timeout(int fd, struct usb_vhci_work *work, int16_t time
 
 int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb)
 {
-	struct vhci_ioc_urb_data u;
+	struct usb_vhci_ioc_urb_data u;
 	u.handle        = urb->handle;
 	u.buffer_length = urb->buffer_length;
 	const int pc    = urb->packet_count;
@@ -159,7 +152,7 @@ int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb)
 	if(pc > 0)
 		u.iso_packets = malloc(sizeof *u.iso_packets * pc);
 
-	int ret = ioctl(fd, VHCI_HCD_IOCFETCHDATA, &u);
+	int ret = ioctl(fd, USB_VHCI_HCD_IOCFETCHDATA, &u);
 	if(ret == -1)
 		goto err;
 	ret = 0;
@@ -179,7 +172,7 @@ err:
 
 int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
 {
-	struct vhci_ioc_giveback gb;
+	struct usb_vhci_ioc_giveback gb;
 	gb.handle = urb->handle;
 	gb.status = urb->status;
 	gb.buffer_actual = urb->buffer_actual;
@@ -203,7 +196,7 @@ int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
 		}
 	}
 
-	int ret = ioctl(fd, VHCI_HCD_IOCGIVEBACK, &gb);
+	int ret = ioctl(fd, USB_VHCI_HCD_IOCGIVEBACK, &gb);
 
 	if(gb.iso_packets)
 		free(gb.iso_packets);
@@ -223,7 +216,7 @@ int usb_vhci_port_connect(int fd, uint8_t port, uint8_t data_rate)
 		errno = EINVAL;
 		return -1;
 	}
-	struct vhci_ioc_port_stat ps;
+	struct usb_vhci_ioc_port_stat ps;
 	ps.status = USB_PORT_STAT_CONNECTION;
 	if(data_rate == USB_VHCI_DATA_RATE_LOW)
 		ps.status |= USB_PORT_STAT_LOW_SPEED;
@@ -232,7 +225,7 @@ int usb_vhci_port_connect(int fd, uint8_t port, uint8_t data_rate)
 	ps.change = USB_PORT_STAT_C_CONNECTION;
 	ps.index = port;
 	ps.flags = 0;
-	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+	if(ioctl(fd, USB_VHCI_HCD_IOCPORTSTAT, &ps) == -1)
 		return -1;
 	return 0;
 }
@@ -244,12 +237,12 @@ int usb_vhci_port_disconnect(int fd, uint8_t port)
 		errno = EINVAL;
 		return -1;
 	}
-	struct vhci_ioc_port_stat ps;
+	struct usb_vhci_ioc_port_stat ps;
 	ps.status = 0;
 	ps.change = USB_PORT_STAT_C_CONNECTION;
 	ps.index = port;
 	ps.flags = 0;
-	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+	if(ioctl(fd, USB_VHCI_HCD_IOCPORTSTAT, &ps) == -1)
 		return -1;
 	return 0;
 }
@@ -261,12 +254,12 @@ int usb_vhci_port_disable(int fd, uint8_t port)
 		errno = EINVAL;
 		return -1;
 	}
-	struct vhci_ioc_port_stat ps;
+	struct usb_vhci_ioc_port_stat ps;
 	ps.status = 0;
 	ps.change = USB_PORT_STAT_C_ENABLE;
 	ps.index = port;
 	ps.flags = 0;
-	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+	if(ioctl(fd, USB_VHCI_HCD_IOCPORTSTAT, &ps) == -1)
 		return -1;
 	return 0;
 }
@@ -278,12 +271,12 @@ int usb_vhci_port_resumed(int fd, uint8_t port)
 		errno = EINVAL;
 		return -1;
 	}
-	struct vhci_ioc_port_stat ps;
+	struct usb_vhci_ioc_port_stat ps;
 	ps.status = 0;
 	ps.change = USB_PORT_STAT_C_SUSPEND;
 	ps.index = port;
 	ps.flags = 0;
-	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+	if(ioctl(fd, USB_VHCI_HCD_IOCPORTSTAT, &ps) == -1)
 		return -1;
 	return 0;
 }
@@ -295,12 +288,12 @@ int usb_vhci_port_overcurrent(int fd, uint8_t port, uint8_t set)
 		errno = EINVAL;
 		return -1;
 	}
-	struct vhci_ioc_port_stat ps;
+	struct usb_vhci_ioc_port_stat ps;
 	ps.status = set ? USB_PORT_STAT_OVERCURRENT : 0;
 	ps.change = USB_PORT_STAT_C_OVERCURRENT;
 	ps.index = port;
 	ps.flags = 0;
-	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+	if(ioctl(fd, USB_VHCI_HCD_IOCPORTSTAT, &ps) == -1)
 		return -1;
 	return 0;
 }
@@ -312,13 +305,13 @@ int usb_vhci_port_reset_done(int fd, uint8_t port, uint8_t enable)
 		errno = EINVAL;
 		return -1;
 	}
-	struct vhci_ioc_port_stat ps;
+	struct usb_vhci_ioc_port_stat ps;
 	ps.status = enable ? USB_PORT_STAT_ENABLE : 0;;
 	ps.change = USB_PORT_STAT_C_RESET;
 	ps.change |= enable ? 0 : USB_PORT_STAT_C_ENABLE;
 	ps.index = port;
 	ps.flags = 0;
-	if(ioctl(fd, VHCI_HCD_IOCPORTSTAT, &ps) == -1)
+	if(ioctl(fd, USB_VHCI_HCD_IOCPORTSTAT, &ps) == -1)
 		return -1;
 	return 0;
 }
