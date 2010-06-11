@@ -118,6 +118,10 @@ int usb_vhci_port_resumed(int fd, uint8_t port) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_port_overcurrent(int fd, uint8_t port, uint8_t set) _LIB_USB_VHCI_NOTHROW;
 int usb_vhci_port_reset_done(int fd, uint8_t port, uint8_t enable) _LIB_USB_VHCI_NOTHROW;
 
+// helper function for detecting relevant port stat changes issued by the kernel
+uint8_t usb_vhci_port_stat_triggers(const struct usb_vhci_port_stat *stat,
+                                    const struct usb_vhci_port_stat *prev) _LIB_USB_VHCI_NOTHROW;
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
@@ -128,6 +132,13 @@ int usb_vhci_port_reset_done(int fd, uint8_t port, uint8_t enable) _LIB_USB_VHCI
 #define usb_vhci_is_int(type)     ((type) == USB_VHCI_URB_TYPE_INT)
 #define usb_vhci_is_control(type) ((type) == USB_VHCI_URB_TYPE_CONTROL)
 #define usb_vhci_is_bulk(type)    ((type) == USB_VHCI_URB_TYPE_BULK)
+
+#define USB_VHCI_PORT_STAT_TRIGGER_DISABLE   0x01
+#define USB_VHCI_PORT_STAT_TRIGGER_SUSPEND   0x02
+#define USB_VHCI_PORT_STAT_TRIGGER_RESUMING  0x04
+#define USB_VHCI_PORT_STAT_TRIGGER_RESET     0x08
+#define USB_VHCI_PORT_STAT_TRIGGER_POWER_ON  0x10
+#define USB_VHCI_PORT_STAT_TRIGGER_POWER_OFF 0x20
 
 #define URB_RQ_GET_STATUS         0
 #define URB_RQ_CLEAR_FEATURE      1
@@ -318,13 +329,6 @@ namespace usb
 			void set_reset_changed(bool value) throw()
 			{ change = (change & ~USB_VHCI_PORT_STAT_C_RESET) |       (value ? USB_VHCI_PORT_STAT_C_RESET : 0); }
 		};
-
-#define USB_VHCI_PORT_STAT_TRIGGER_DISABLE   0x01
-#define USB_VHCI_PORT_STAT_TRIGGER_SUSPEND   0x02
-#define USB_VHCI_PORT_STAT_TRIGGER_RESUMING  0x04
-#define USB_VHCI_PORT_STAT_TRIGGER_RESET     0x08
-#define USB_VHCI_PORT_STAT_TRIGGER_POWER_ON  0x10
-#define USB_VHCI_PORT_STAT_TRIGGER_POWER_OFF 0x20
 
 		class work
 		{

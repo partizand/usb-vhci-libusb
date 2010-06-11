@@ -315,3 +315,23 @@ int usb_vhci_port_reset_done(int fd, uint8_t port, uint8_t enable)
 		return -1;
 	return 0;
 }
+
+uint8_t usb_vhci_port_stat_triggers(const struct usb_vhci_port_stat *stat,
+                                    const struct usb_vhci_port_stat *prev)
+{
+	uint8_t flags = 0;
+	if(!(stat->status & USB_VHCI_PORT_STAT_ENABLE) &&
+	    (prev->status & USB_VHCI_PORT_STAT_ENABLE))       flags |= USB_VHCI_PORT_STAT_TRIGGER_DISABLE;
+	if( (stat->status & USB_VHCI_PORT_STAT_SUSPEND) &&
+	   !(prev->status & USB_VHCI_PORT_STAT_SUSPEND))      flags |= USB_VHCI_PORT_STAT_TRIGGER_SUSPEND;
+	if( (stat->flags & USB_VHCI_PORT_STAT_FLAG_RESUMING) &&
+	   !(prev->flags & USB_VHCI_PORT_STAT_FLAG_RESUMING)) flags |= USB_VHCI_PORT_STAT_TRIGGER_RESUMING;
+	if( (stat->status & USB_VHCI_PORT_STAT_RESET) &&
+	   !(prev->status & USB_VHCI_PORT_STAT_RESET))        flags |= USB_VHCI_PORT_STAT_TRIGGER_RESET;
+	if( (stat->status & USB_VHCI_PORT_STAT_POWER) &&
+	   !(prev->status & USB_VHCI_PORT_STAT_POWER))        flags |= USB_VHCI_PORT_STAT_TRIGGER_POWER_ON;
+	if(!(stat->status & USB_VHCI_PORT_STAT_POWER) &&
+	    (prev->status & USB_VHCI_PORT_STAT_POWER))        flags |= USB_VHCI_PORT_STAT_TRIGGER_POWER_OFF;
+	return flags;
+}
+
