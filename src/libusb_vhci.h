@@ -34,7 +34,7 @@
 
 #include <linux/usb-vhci.h>
 
-#define USB_VHCI_DEVICE_FILE "/dev/vhci-ctrl"
+#define USB_VHCI_DEVICE_FILE "/dev/usb-vhci"
 
 #ifdef _LIB_USB_VHCI_NOTHROW
 #undef _LIB_USB_VHCI_NOTHROW
