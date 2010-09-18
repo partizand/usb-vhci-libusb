@@ -119,7 +119,7 @@ int usb_vhci_fetch_work_timeout(int fd, struct usb_vhci_work *work, int16_t time
 		}
 		work->type = USB_VHCI_WORK_TYPE_PROCESS_URB;
 		work->work.urb.type          = w.work.urb.type;
-		work->work.urb.status        = -EINPROGRESS;
+		work->work.urb.status        = USB_VHCI_STATUS_PENDING;
 		work->work.urb.handle        = w.handle;
 		work->work.urb.buffer_length = w.work.urb.buffer_length;
 		if(usb_vhci_is_out(w.work.urb.endpoint) || usb_vhci_is_iso(work->work.urb.type))
@@ -161,7 +161,7 @@ int usb_vhci_fetch_data(int fd, const struct usb_vhci_urb *urb)
 		urb->iso_packets[i].offset = u.iso_packets[i].offset;
 		urb->iso_packets[i].packet_length = (int32_t)u.iso_packets[i].packet_length;
 		urb->iso_packets[i].packet_actual = 0;
-		urb->iso_packets[i].status = -EINPROGRESS;
+		urb->iso_packets[i].status = USB_VHCI_STATUS_PENDING;
 	}
 
 err:
@@ -174,7 +174,7 @@ int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
 {
 	struct usb_vhci_ioc_giveback gb;
 	gb.handle = urb->handle;
-	gb.status = urb->status;
+	gb.status = usb_vhci_to_errno(urb->status, usb_vhci_is_iso(urb->type));
 	gb.buffer_actual = urb->buffer_actual;
 	gb.buffer = NULL;
 	gb.iso_packets = NULL;
@@ -191,7 +191,7 @@ int usb_vhci_giveback(int fd, const struct usb_vhci_urb *urb)
 		gb.error_count = urb->error_count;
 		for(int i = 0; i < pc; i++)
 		{
-			gb.iso_packets[i].status = urb->iso_packets[i].status;
+			gb.iso_packets[i].status = usb_vhci_to_iso_packets_errno(urb->iso_packets[i].status);
 			gb.iso_packets[i].packet_actual = (uint32_t)urb->iso_packets[i].packet_actual;
 		}
 	}
@@ -333,5 +333,64 @@ uint8_t usb_vhci_port_stat_triggers(const struct usb_vhci_port_stat *stat,
 	if(!(stat->status & USB_VHCI_PORT_STAT_POWER) &&
 	    (prev->status & USB_VHCI_PORT_STAT_POWER))        flags |= USB_VHCI_PORT_STAT_TRIGGER_POWER_OFF;
 	return flags;
+}
+
+int usb_vhci_to_errno(int32_t status, uint8_t iso_urb)
+{
+	switch(status)
+	{
+	case USB_VHCI_STATUS_SUCCESS:                return 0;
+	case USB_VHCI_STATUS_PENDING:                return -EINPROGRESS;
+	case USB_VHCI_STATUS_SHORT_PACKET:           return -EREMOTEIO;
+	case USB_VHCI_STATUS_ERROR:                  return iso_urb ? -EXDEV : -EPROTO;
+	case USB_VHCI_STATUS_CANCELED:               return -ECONNRESET; // or -ENOENT
+	case USB_VHCI_STATUS_TIMEDOUT:               return -ETIMEDOUT;
+	case USB_VHCI_STATUS_DEVICE_DISABLED:        return -ESHUTDOWN;
+	case USB_VHCI_STATUS_DEVICE_DISCONNECTED:    return -ENODEV;
+	case USB_VHCI_STATUS_BIT_STUFF:              return -EPROTO;
+	case USB_VHCI_STATUS_CRC:                    return -EILSEQ;
+	case USB_VHCI_STATUS_NO_RESPONSE:            return -ETIME;
+	case USB_VHCI_STATUS_BABBLE:                 return -EOVERFLOW;
+	case USB_VHCI_STATUS_STALL:                  return -EPIPE;
+	case USB_VHCI_STATUS_BUFFER_OVERRUN:         return -ECOMM;
+	case USB_VHCI_STATUS_BUFFER_UNDERRUN:        return -ENOSR;
+	case USB_VHCI_STATUS_ALL_ISO_PACKETS_FAILED: return iso_urb ? -EINVAL : -EPROTO;
+	default:                                     return -EPROTO;
+	}
+}
+
+int32_t usb_vhci_from_errno(int errno, uint8_t iso_urb)
+{
+	switch(errno)
+	{
+	case 0:            return USB_VHCI_STATUS_SUCCESS;
+	case -EINPROGRESS: return USB_VHCI_STATUS_PENDING;
+	case -EREMOTEIO:   return USB_VHCI_STATUS_SHORT_PACKET;
+	case -ENOENT:
+	case -ECONNRESET:  return USB_VHCI_STATUS_CANCELED;
+	case -ETIMEDOUT:   return USB_VHCI_STATUS_TIMEDOUT;
+	case -ESHUTDOWN:   return USB_VHCI_STATUS_DEVICE_DISABLED;
+	case -ENODEV:      return USB_VHCI_STATUS_DEVICE_DISCONNECTED;
+	case -EPROTO:      return USB_VHCI_STATUS_BIT_STUFF;
+	case -EILSEQ:      return USB_VHCI_STATUS_CRC;
+	case -ETIME:       return USB_VHCI_STATUS_NO_RESPONSE;
+	case -EOVERFLOW:   return USB_VHCI_STATUS_BABBLE;
+	case -EPIPE:       return USB_VHCI_STATUS_STALL;
+	case -ECOMM:       return USB_VHCI_STATUS_BUFFER_OVERRUN;
+	case -ENOSR:       return USB_VHCI_STATUS_BUFFER_UNDERRUN;
+	case -EINVAL:      return iso_urb ? USB_VHCI_STATUS_ALL_ISO_PACKETS_FAILED :
+	                                    USB_VHCI_STATUS_ERROR;
+	default:           return USB_VHCI_STATUS_ERROR;
+	}
+}
+
+int usb_vhci_to_iso_packets_errno(int32_t status)
+{
+	return usb_vhci_to_errno(status, 0);
+}
+
+int32_t usb_vhci_from_iso_packets_errno(int errno)
+{
+	return usb_vhci_from_errno(errno, 0);
 }
 

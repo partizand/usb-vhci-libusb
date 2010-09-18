@@ -21,13 +21,14 @@
  * a virtual device plugged into it. If you want to have it running, you
  * have to do the following:
  *
- * 1. Download, build and load the vhci-hcd kernel module. (See README or
- *    INSTALL instructions in its source directory.)
+ * 1. Download, build and load the kernel modules. You can download them here:
+ *    http://sourceforge.net/projects/usb-vhci/files/linux%20kernel%20module/
+ *    (See README or INSTALL instructions in its source directory.)
  * 2. Build the libraries and this example. ("./configure && make" in
  *    the top level directory of this source package.)
  * 3. Run "./virtual_device2" in the examples subdirectory. You have to
- *    be root, if you did not make /dev/vhci-ctrl accessible for all
- *    users (chmod 666 /dev/vhci-ctrl).
+ *    be root, if you did not make /dev/usb-vhci accessible for all
+ *    users (chmod 666 /dev/usb-vhci).
  *
  * Now type "dmesg" in another shell or "cat /proc/bus/usb/devices" if
  * you have usbfs mounted. You should see a dummy usb device, which does
@@ -104,7 +105,7 @@ void process_urb(struct usb_vhci_urb *urb)
 	if(urb->epadr & 0x7f)
 	{
 		printf("not ep0\n");
-		urb->status = -EPIPE; // stall
+		urb->status = USB_VHCI_STATUS_STALL;
 		return;
 	}
 
@@ -113,12 +114,12 @@ void process_urb(struct usb_vhci_urb *urb)
 	if(rt == 0x00 && r == URB_RQ_SET_CONFIGURATION)
 	{
 		printf("SET_CONFIGURATION\n");
-		urb->status = 0; // ack
+		urb->status = USB_VHCI_STATUS_SUCCESS;
 	}
 	else if(rt == 0x00 && r == URB_RQ_SET_INTERFACE)
 	{
 		printf("SET_INTERFACE\n");
-		urb->status = 0; // ack
+		urb->status = USB_VHCI_STATUS_SUCCESS;
 	}
 	else if(rt == 0x80 && r == URB_RQ_GET_DESCRIPTOR)
 	{
@@ -132,14 +133,14 @@ void process_urb(struct usb_vhci_urb *urb)
 			if(dev_desc[0] < l) l = dev_desc[0];
 			memcpy(buffer, dev_desc, l);
 			urb->buffer_actual = l;
-			urb->status = 0; // ack
+			urb->status = USB_VHCI_STATUS_SUCCESS;
 			break;
 		case 2:
 			printf("CONFIGURATION_DESCRIPTOR\n");
 			if(conf_desc[2] < l) l = conf_desc[2];
 			memcpy(buffer, conf_desc, l);
 			urb->buffer_actual = l;
-			urb->status = 0; // ack
+			urb->status = USB_VHCI_STATUS_SUCCESS;
 			break;
 		case 3:
 			printf("STRING_DESCRIPTOR\n");
@@ -149,25 +150,25 @@ void process_urb(struct usb_vhci_urb *urb)
 				if(str0_desc[0] < l) l = str0_desc[0];
 				memcpy(buffer, str0_desc, l);
 				urb->buffer_actual = l;
-				urb->status = 0; // ack
+				urb->status = USB_VHCI_STATUS_SUCCESS;
 				break;
 			case 1:
 				if(str1_desc[0] < l) l = str1_desc[0];
 				memcpy(buffer, str1_desc, l);
 				urb->buffer_actual = l;
-				urb->status = 0; // ack
+				urb->status = USB_VHCI_STATUS_SUCCESS;
 				break;
 			default:
-				urb->status = -EPIPE; // stall
+				urb->status = USB_VHCI_STATUS_STALL;
 				break;
 			}
 		default:
-			urb->status = -EPIPE; // stall
+			urb->status = USB_VHCI_STATUS_STALL;
 			break;
 		}
 	}
 	else
-		urb->status = -EPIPE; // stall
+		urb->status = USB_VHCI_STATUS_STALL;
 }
 
 int main()
@@ -300,10 +301,10 @@ int main()
 				if(usb_vhci_is_control(w.work.urb.type) && !(w.work.urb.epadr & 0x7f) && !w.work.urb.bmRequestType && w.work.urb.bRequest == 5)
 				{
 					if(w.work.urb.wValue > 0x7f)
-						w.work.urb.status = -EPIPE; // stall
+						w.work.urb.status = USB_VHCI_STATUS_STALL;
 					else
 					{
-						w.work.urb.status = 0; // ack
+						w.work.urb.status = USB_VHCI_STATUS_SUCCESS;
 						adr = (uint8_t)w.work.urb.wValue;
 						printf("SET_ADDRESS (adr=%hhu)\n", adr);
 					}

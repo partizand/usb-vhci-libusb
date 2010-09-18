@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Michael Singer <michael@a-singer.de>
+ * Copyright (C) 2009-2010 Michael Singer <michael@a-singer.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,13 +21,14 @@
  * a virtual device plugged into it. If you want to have it running, you
  * have to do the following:
  *
- * 1. Download, build and load the vhci-hcd kernel module. (See README or
- *    INSTALL instructions in its source directory.)
+ * 1. Download, build and load the kernel modules. You can download them here:
+ *    http://sourceforge.net/projects/usb-vhci/files/linux%20kernel%20module/
+ *    (See README or INSTALL instructions in its source directory.)
  * 2. Build the libraries and this example. ("./configure && make" in
  *    the top level directory of this source package.)
  * 3. Run "./virtual_device" in the examples subdirectory. You have to
- *    be root, if you did not make /dev/vhci-ctrl accessible for all
- *    users (chmod 666 /dev/vhci-ctrl).
+ *    be root, if you did not make /dev/usb-vhci accessible for all
+ *    users (chmod 666 /dev/usb-vhci).
  *
  * Now type "dmesg" in another shell or "cat /proc/bus/usb/devices" if
  * you have usbfs mounted. You should see a dummy usb device, which does

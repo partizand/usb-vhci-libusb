@@ -46,6 +46,23 @@ extern "C" {
 #define _LIB_USB_VHCI_NOTHROW
 #endif
 
+#define USB_VHCI_STATUS_SUCCESS                0x00000000
+#define USB_VHCI_STATUS_PENDING                0x10000001
+#define USB_VHCI_STATUS_SHORT_PACKET           0x10000002
+#define USB_VHCI_STATUS_ERROR                  0x7ff00000
+#define USB_VHCI_STATUS_CANCELED               0x30000001
+#define USB_VHCI_STATUS_TIMEDOUT               0x30000002
+#define USB_VHCI_STATUS_DEVICE_DISABLED        0x71000001
+#define USB_VHCI_STATUS_DEVICE_DISCONNECTED    0x71000002
+#define USB_VHCI_STATUS_BIT_STUFF              0x72000001
+#define USB_VHCI_STATUS_CRC                    0x72000002
+#define USB_VHCI_STATUS_NO_RESPONSE            0x72000003
+#define USB_VHCI_STATUS_BABBLE                 0x72000004
+#define USB_VHCI_STATUS_STALL                  0x74000001
+#define USB_VHCI_STATUS_BUFFER_OVERRUN         0x72100001
+#define USB_VHCI_STATUS_BUFFER_UNDERRUN        0x72100002
+#define USB_VHCI_STATUS_ALL_ISO_PACKETS_FAILED 0x78000001
+
 struct usb_vhci_iso_packet
 {
 	uint32_t offset;
@@ -121,6 +138,12 @@ int usb_vhci_port_reset_done(int fd, uint8_t port, uint8_t enable) _LIB_USB_VHCI
 // helper function for detecting relevant port stat changes issued by the kernel
 uint8_t usb_vhci_port_stat_triggers(const struct usb_vhci_port_stat *stat,
                                     const struct usb_vhci_port_stat *prev) _LIB_USB_VHCI_NOTHROW;
+
+// for converting status codes
+int usb_vhci_to_errno(int32_t status, uint8_t iso_urb) _LIB_USB_VHCI_NOTHROW;
+int32_t usb_vhci_from_errno(int errno, uint8_t iso_urb) _LIB_USB_VHCI_NOTHROW;
+int usb_vhci_to_iso_packets_errno(int32_t status) _LIB_USB_VHCI_NOTHROW;
+int32_t usb_vhci_from_iso_packets_errno(int errno) _LIB_USB_VHCI_NOTHROW;
 
 #ifdef __cplusplus
 } // extern "C"
@@ -236,8 +259,8 @@ namespace usb
 		bool is_control() const throw() { return get_type() == urb_type_control; }
 		bool is_bulk() const throw() { return get_type() == urb_type_bulk; }
 		void set_status(int32_t value) throw() { _urb.status = value; }
-		void ack() throw() { set_status(0); }
-		void stall() throw() { set_status(-EPIPE); }
+		void ack() throw() { set_status(USB_VHCI_STATUS_SUCCESS); }
+		void stall() throw() { set_status(USB_VHCI_STATUS_STALL); }
 		void set_buffer_actual(int32_t value) throw() { _urb.buffer_actual = value; }
 		void set_iso_error_count(int32_t value) throw() { _urb.error_count = value; }
 		bool is_short_not_ok() const throw() { return _urb.flags & USB_VHCI_URB_FLAGS_SHORT_NOT_OK; }

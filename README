@@ -1,9 +1,8 @@
 Read INSTALL for build/install instructions.
 
-Web: http://usb-vhci.checkarada.com/
-     http://sourceforge.net/apps/mediawiki/usb-vhci/
+Web: http://sourceforge.net/apps/mediawiki/usb-vhci/
      http://sourceforge.net/projects/usb-vhci/
 
-You also need the kernel module for this to work. Download it from:
+You also need the kernel modules for this to work. Download it from:
 http://sourceforge.net/projects/usb-vhci/files/linux%20kernel%20module/
 
