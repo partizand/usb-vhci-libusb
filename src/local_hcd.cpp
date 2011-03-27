@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Michael Singer <michael@a-singer.de>
+ * Copyright (C) 2009-2011 Michael Singer <michael@a-singer.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -266,41 +266,8 @@ namespace usb
 				break;
 			} //  vvvv NOT LOCKED vvvv  --  ^^^^ LOCKED ^^^^
 			case USB_VHCI_WORK_TYPE_CANCEL_URB:
-			{
-				cancel_urb_work* cuw(NULL);
-				while(!cuw)
-				{
-					if(!(cuw = new(std::nothrow) cancel_urb_work(0, w.work.handle)))
-					{
-						// wait for others to free mem
-						usleep(100000);
-						if(is_thread_shutdown()) return;
-					}
-				}
-			retry_cu:
-				try
-				{
-					cancel_process_urb_work(w.work.handle);
-				}
-				catch(std::bad_alloc)
-				{
-					// wait for others to free mem
-					usleep(100000);
-					if(is_thread_shutdown())
-					{
-						delete cuw;
-						return;
-					}
-					goto retry_cu;
-				}
-				catch(...)
-				{
-					delete cuw;
-					// TODO: debug msg
-					return;
-				}
+				cancel_process_urb_work(w.work.handle);
 				break;
-			}
 			}
 		}
 
