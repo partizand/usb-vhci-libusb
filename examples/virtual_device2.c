@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Michael Singer <michael@a-singer.de>
+ * Copyright (C) 2009-2011 Michael Singer <michael@a-singer.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -309,7 +309,11 @@ int main()
 						printf("SET_ADDRESS (adr=%hhu)\n", adr);
 					}
 				}
-				process_urb(&w.work.urb);
+				// any other than SET_ADDRESS?
+				else
+				{
+					process_urb(&w.work.urb);
+				}
 				if(usb_vhci_giveback(fd, &w.work.urb) == -1)
 					fprintf(stderr, "usb_vhci_giveback failed with errno %d", errno);
 				free(w.work.urb.buffer);
