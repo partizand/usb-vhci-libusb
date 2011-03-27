@@ -1,5 +1,5 @@
 AC_PREREQ([2.63])
-AC_INIT([libusb_vhci], [0.5])
+AC_INIT([libusb_vhci], [0.6])
 AC_CONFIG_SRCDIR([src/libusb_vhci.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Michael Singer <michael@a-singer.de>
+ * Copyright (C) 2009-2011 Michael Singer <michael@a-singer.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -220,5 +220,30 @@ namespace usb
 		_urb.iso_packets = NULL;
 		_cpy(urb._urb);
 		return *this;
+	}
+
+	void urb::set_iso_results() throw(std::logic_error)
+	{
+		if(!is_isochronous())
+			throw std::logic_error("not an isochronous urb");
+
+		// count error statuses
+		int32_t errors(0);
+		for(int32_t i(0); i < get_iso_packet_count(); i++)
+		{
+			if(get_iso_packet_status(i) != USB_VHCI_STATUS_SUCCESS)
+				errors++;
+		}
+		set_iso_error_count(errors);
+
+		// set urb status according to packet statuses
+		if(errors == get_iso_packet_count())
+			set_status(USB_VHCI_STATUS_ALL_ISO_PACKETS_FAILED);
+		else
+			ack();
+
+		// for IN isos: buffer_actual has to be equal to buffer_length
+		if(is_in())
+			set_buffer_actual(get_buffer_length());
 	}
 }

@@ -263,8 +263,13 @@ namespace usb
 		void stall() throw() { set_status(USB_VHCI_STATUS_STALL); }
 		void set_buffer_actual(int32_t value) throw() { _urb.buffer_actual = value; }
 		void set_iso_error_count(int32_t value) throw() { _urb.error_count = value; }
+		void set_iso_status(int32_t index, int32_t value) throw() { _urb.iso_packets[index].status = value; }
+		void ack_iso(int32_t index) throw() { set_iso_status(index, USB_VHCI_STATUS_SUCCESS); }
+		void stall_iso(int32_t index) throw() { set_iso_status(index, USB_VHCI_STATUS_STALL); }
+		void set_iso_packet_actual(int32_t index, int32_t value) throw() { _urb.iso_packets[index].packet_actual = value; }
 		bool is_short_not_ok() const throw() { return _urb.flags & USB_VHCI_URB_FLAGS_SHORT_NOT_OK; }
 		bool is_zero_packet() const throw() { return _urb.flags & USB_VHCI_URB_FLAGS_ZERO_PACKET; }
+		void set_iso_results() throw(std::logic_error);
 	};
 
 	namespace vhci
