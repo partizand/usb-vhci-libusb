@@ -1,6 +1,6 @@
 Read INSTALL for build/install instructions.
 
-Web: http://sourceforge.net/apps/mediawiki/usb-vhci/
+Web: http://sourceforge.net/p/usb-vhci/wiki/Home/
      http://sourceforge.net/projects/usb-vhci/
 
 You also need the kernel modules for this to work. Download it from:
