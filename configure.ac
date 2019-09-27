@@ -1,10 +1,10 @@
 AC_PREREQ([2.63])
-AC_INIT([libusb_vhci], [0.7])
+AC_INIT([libusb_vhci], [0.8])
 AC_CONFIG_SRCDIR([src/libusb_vhci.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([gnu dist-bzip2 tar-ustar])
+AM_INIT_AUTOMAKE([foreign dist-bzip2 tar-ustar])
 AM_MAINTAINER_MODE
 
 LT_PREREQ([2.2.6])
