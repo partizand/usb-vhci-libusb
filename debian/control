@@ -1,0 +1,15 @@
+Source: libusb-vhci
+Section: libs
+Priority: optional
+Maintainer: Partizand <partizand@gmail.com>
+Build-Depends: debhelper (>= 11)
+Standards-Version: 4.1.3
+Homepage: http://sourceforge.net/projects/usb-vhci/
+#Vcs-Git: https://git.code.sf.net/p/usb-vhci/libusb_vhci
+
+Package: libusb-vhci
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: User-mode libraries for a virtual usb host controller.
+ This project consists of a linux kernel driver and some user-mode libraries. They allow a process to create a virtual usb host controller. Real     or virtual usb devices can be "plugged" into this controller. 
+ https://sourceforge.net/p/usb-vhci/wiki/Home/

@@ -1,0 +1,5 @@
+libusb-vhci (0.8-1) unstable; urgency=medium
+
+  * Initial release
+
+ -- Partizand <partizand@gmail.com>  Thu, 31 Oct 2019 09:08:31 +0400
