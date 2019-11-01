@@ -1,3 +1,9 @@
+libusb-vhci (0.8-2) unstable; urgency=medium
+
+  * Split to dev and library package
+
+ -- Partizand <partizand@gmail.com>  Fri, 01 Nov 2019 12:29:06 +0400
+
 libusb-vhci (0.8-1) unstable; urgency=medium
 
   * Initial release
