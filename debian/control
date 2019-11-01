@@ -2,7 +2,7 @@ Source: libusb-vhci
 Section: libs
 Priority: optional
 Maintainer: Partizand <partizand@gmail.com>
-Build-Depends: debhelper (>= 11)
+Build-Depends: usb-vhci-hcd-dev,debhelper (>= 11)
 Standards-Version: 4.1.3
 Homepage: http://sourceforge.net/projects/usb-vhci/
 #Vcs-Git: https://git.code.sf.net/p/usb-vhci/libusb_vhci
